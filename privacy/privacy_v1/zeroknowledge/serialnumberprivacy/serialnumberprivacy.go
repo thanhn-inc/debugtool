@@ -353,7 +353,6 @@ func (proof SNPrivacyProof) Verify(mess []byte) (bool, error) {
 	rightPoint2.Add(rightPoint2, proof.tSK)
 
 	if !operation.IsPointEqual(leftPoint2, rightPoint2) {
-		Logger.Log.Errorf("verify serial number privacy proof statement 2 failed")
 		return false, errors.New("verify serial number privacy proof statement 2 failed")
 	}
 
@@ -401,7 +400,6 @@ func (proof SNPrivacyProof) VerifyOld(mess []byte) (bool, error) {
 	rightPoint2.Add(rightPoint2, proof.tSK)
 
 	if !operation.IsPointEqual(leftPoint2, rightPoint2) {
-		Logger.Log.Errorf("verifyOld serial number privacy proof statement 2 failed")
 		return false, errors.New("verifyOld serial number privacy proof statement 2 failed")
 	}
 

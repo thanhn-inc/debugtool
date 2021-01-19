@@ -548,7 +548,6 @@ func (proof AggregatedRangeProof) Verify() (bool, error) {
 	right1.Add(right1, new(operation.Point).MultiScalarMult(expVector, tmpcmsValue))
 
 	if !operation.IsPointEqual(left1, right1) {
-		Logger.Log.Errorf("verify aggregated range proof statement 1 failed")
 
 		////TODO Remove later ...
 		//fmt.Println("[BUGLOG SKIP TX] Skip Fail Tx to Test")
@@ -560,7 +559,6 @@ func (proof AggregatedRangeProof) Verify() (bool, error) {
 
 	innerProductArgValid := proof.innerProductProof.Verify(aggParam)
 	if !innerProductArgValid {
-		Logger.Log.Errorf("verify aggregated range proof statement 2 failed")
 		return false, errors.New("verify aggregated range proof statement 2 failed")
 	}
 
@@ -659,7 +657,6 @@ func VerifyBatchingAggregatedRangeProofs(proofs []*AggregatedRangeProof) (bool, 
 		right1.Add(right1, new(operation.Point).MultiScalarMult(expVector, tmpcmsValue))
 
 		if !operation.IsPointEqual(left1, right1) {
-			Logger.Log.Errorf("verify aggregated range proof statement 1 failed index %d", k)
 			return false, fmt.Errorf("verify aggregated range proof statement 1 failed index %d", k), k
 		}
 
@@ -669,7 +666,6 @@ func VerifyBatchingAggregatedRangeProofs(proofs []*AggregatedRangeProof) (bool, 
 
 	innerProductArgsValid := VerifyBatchingInnerProductProofs(innerProductProofs, csList)
 	if !innerProductArgsValid {
-		Logger.Log.Errorf("verify batch aggregated range proofs statement 2 failed")
 		return false, errors.New("verify batch aggregated range proofs statement 2 failed"), -1
 	}
 
