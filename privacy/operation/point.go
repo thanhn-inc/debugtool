@@ -4,6 +4,7 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"errors"
+	"fmt"
 
 	C25519 "github.com/thanhn-inc/debugtool/privacy/operation/curve25519"
 )
