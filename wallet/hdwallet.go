@@ -113,10 +113,10 @@ func (key *KeyWallet) Serialize(keyType byte, isNewCheckSum bool) ([]byte, error
 		keyBytes = append(keyBytes, byte(len(key.KeySet.PaymentAddress.Tk))) // set length Pkenc
 		keyBytes = append(keyBytes, key.KeySet.PaymentAddress.Tk[:]...)      // set Pkenc
 
-		if len(key.KeySet.PaymentAddress.OTAPublic) > 0 {
-			keyBytes = append(keyBytes, byte(len(key.KeySet.PaymentAddress.OTAPublic))) // set length OTAPublicKey
-			keyBytes = append(keyBytes, key.KeySet.PaymentAddress.OTAPublic[:]...)      // set OTAPublicKey
-		}
+		//if len(key.KeySet.PaymentAddress.OTAPublic) > 0 {
+		//	keyBytes = append(keyBytes, byte(len(key.KeySet.PaymentAddress.OTAPublic))) // set length OTAPublicKey
+		//	keyBytes = append(keyBytes, key.KeySet.PaymentAddress.OTAPublic[:]...)      // set OTAPublicKey
+		//}
 
 		buffer.Write(keyBytes)
 	} else if keyType == ReadonlyKeyType {
@@ -151,12 +151,12 @@ func (key *KeyWallet) Serialize(keyType byte, isNewCheckSum bool) ([]byte, error
 // in the standard Incognito base58 encoding
 // It returns the encoding string of the key
 func (key *KeyWallet) Base58CheckSerialize(keyType byte) string {
-	serializedKey, err := key.Serialize(keyType, true) //Must use the new checksum from now on
+	serializedKey, err := key.Serialize(keyType, false) //Must use the new checksum from now on
 	if err != nil {
 		return ""
 	}
 
-	return base58.Base58Check{}.NewEncode(serializedKey, common.ZeroByte) //Must use the new encoding algorithm from now on
+	return base58.Base58Check{}.Encode(serializedKey, common.ZeroByte) //Must use the new encoding algorithm from now on
 }
 
 // Deserialize receives a byte array and deserializes into KeySet
