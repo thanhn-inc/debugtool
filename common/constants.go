@@ -17,6 +17,8 @@ const (
 )
 
 
+const PRVIDStr = "0000000000000000000000000000000000000000000000000000000000000004"
+
 // size data for incognito key and signature
 const (
 	// for key size
