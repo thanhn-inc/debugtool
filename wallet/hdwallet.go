@@ -31,7 +31,6 @@ func NewMasterKey(seed []byte) (*KeyWallet, error) {
 	hmacObj := hmac.New(sha512.New, []byte("Incognito Seed"))
 	_, err := hmacObj.Write(seed)
 	if err != nil {
-		Logger.log.Error(err)
 		return nil, err
 	}
 	intermediary := hmacObj.Sum(nil)
