@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"github.com/thanhn-inc/debugtool/common"
 	"github.com/thanhn-inc/debugtool/common/base58"
@@ -105,6 +106,24 @@ func GetBalance(privkey, tokenID string) {
 	b, _ := debugtool.GetBalance(privkey, tokenID)
 	fmt.Println(string(b))
 	fmt.Println("========== END GET BALANCE ==========")
+}
+
+//Token
+func ListTokens() {
+	fmt.Println("========== LIST ALL TOKEN ==========")
+	b, _ := rpc.ListPrivacyCustomTokenByRPC()
+	res := new(rpc.ListCustomToken)
+	_ = json.Unmarshal(b, res)
+	fmt.Println("Number of Token: ", len(res.Result.ListCustomToken))
+	if len(res.Result.ListCustomToken) > 0 {
+		for _, token := range res.Result.ListCustomToken {
+			fmt.Println("Token ", token.Name, token.ID)
+		}
+		fmt.Println("========== END LIST ALL TOKEN ==========")
+		return
+	}
+	fmt.Println("========== END LIST ALL TOKEN ==========")
+	return
 }
 
 //Transactions
@@ -310,6 +329,137 @@ func main() {
 			}
 
 			fmt.Printf("CreateAndSendRawTransaction succeeded. TxHash: %v.\n", txHash)
+		}
+
+		//TOKEN RPCs
+		if args[0] == "inittoken" {
+			if len(args) < 3 {
+				fmt.Println("need at least 3 arguments.")
+				continue
+			}
+
+			var privateKey string
+			if len(args[1]) < 3 {
+				index, err := strconv.ParseInt(args[1], 10, 32)
+				if err != nil {
+					fmt.Println(err)
+					panic(err)
+				}
+				if index >= int64(len(privateKeys)) {
+					fmt.Println("Cannot find the private key")
+					continue
+				}
+				privateKey = privateKeys[index]
+			} else {
+				privateKey = args[1]
+			}
+
+			b, err := rpc.CreateAndSendPrivacyCustomTokenTransaction(privateKey, args[2])
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			fmt.Println(string(b))
+		}
+		if args[0] == "balancetoken" {
+			var privateKey string
+			if len(args[1]) < 3 {
+				index, err := strconv.ParseInt(args[1], 10, 32)
+				if err != nil {
+					fmt.Println(err)
+					panic(err)
+				}
+				if index >= int64(len(privateKeys)) {
+					fmt.Println("Cannot find the private key")
+					continue
+				}
+				privateKey = privateKeys[index]
+			} else {
+				privateKey = args[1]
+			}
+
+			var tokenID = args[2]
+			var ok bool
+			if len(tokenID) < 10 {
+				tokenID, ok = tokenIDs[tokenID]
+				if !ok {
+					fmt.Println("cannot find tokenID")
+					fmt.Println("list of tokenIDs", tokenIDs)
+					continue
+				}
+			}
+
+			balance, err := debugtool.GetBalance(privateKey, tokenID)
+			if err != nil{
+				fmt.Println(err)
+				continue
+			}
+			fmt.Println("Balance =", balance)
+		}
+		if args[0] == "transfertoken" {
+			if len(args) < 5 {
+				fmt.Println("need at least 5 arguments.")
+			}
+
+			var privateKey string
+			if len(args[1]) < 3 {
+				index, err := strconv.ParseInt(args[1], 10, 32)
+				if err != nil {
+					fmt.Println(err)
+					panic(err)
+				}
+				if index >= int64(len(privateKeys)) {
+					fmt.Println("Cannot find the private key")
+					continue
+				}
+				privateKey = privateKeys[index]
+			} else {
+				privateKey = args[1]
+			}
+
+			var paymentAddress string
+			if len(args[2]) < 4 {
+				index, err := strconv.ParseInt(args[2], 10, 32)
+				if err != nil {
+					fmt.Println(err)
+					panic(err)
+				}
+				if index >= int64(len(privateKeys)) {
+					fmt.Println("Cannot find the private key")
+					continue
+				}
+				paymentAddress = privateKeyToPaymentAddress(privateKeys[index], -1)
+			} else {
+				paymentAddress = args[2]
+			}
+
+			var tokenID = args[3]
+			var ok bool
+			if len(tokenID) < 10 {
+				tokenID, ok = tokenIDs[tokenID]
+				if !ok {
+					fmt.Println("cannot find tokenID")
+					fmt.Println("list of tokenIDs", tokenIDs)
+					continue
+				}
+			}
+
+			amount, err := strconv.ParseInt(args[4], 10, 32)
+			if err != nil {
+				fmt.Println("cannot parse amount", args[4])
+				continue
+			}
+
+			txHash, err := debugtool.CreateAndSendRawTokenTransaction(privateKey, []string{paymentAddress}, []uint64{uint64(amount)}, 1, tokenID, 1)
+			if err != nil {
+				fmt.Println("CreateAndSendRawTokenTransaction returns an error:", err)
+				continue
+			}
+
+			fmt.Printf("CreateAndSendRawTokenTransaction succeeded. TxHash: %v.\n", txHash)
+		}
+		if args[0] == "listtoken" {
+			ListTokens()
 		}
 
 		//Keys
