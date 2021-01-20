@@ -235,7 +235,21 @@ func SwitchCoinVersion(privKey string) ([]byte, error) {
 //========== END CREATE TX RPCs ==========
 
 func SendRawTx(encodedTx string) ([]byte, error) {
-	method := "sendtransaction"
+	method := sendRawTransaction
+	params := make([]interface{}, 0)
+	params = append(params, encodedTx)
+
+	request := rpchandler.CreateJsonRequest("1.0", method, params, 1)
+	query, err := json.Marshal(request)
+	if err != nil {
+		return nil, err
+	}
+
+	return rpchandler.Server.SendPostRequestWithQuery(string(query))
+}
+
+func SendRawTokenTx(encodedTx string) ([]byte, error) {
+	method := sendRawPrivacyCustomTokenTransaction
 	params := make([]interface{}, 0)
 	params = append(params, encodedTx)
 
