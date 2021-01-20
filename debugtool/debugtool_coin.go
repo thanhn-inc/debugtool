@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"github.com/thanhn-inc/debugtool/common"
 	"github.com/thanhn-inc/debugtool/privacy/coin"
-	"github.com/thanhn-inc/debugtool/rpcserver/jsonresult"
+	"github.com/thanhn-inc/debugtool/rpchandler/jsonresult"
+	"github.com/thanhn-inc/debugtool/rpchandler/rpc"
 	"github.com/thanhn-inc/debugtool/wallet"
 	"math/big"
 )
 
-func (tool *DebugTool) GetOutputCoins(outCoinKey *OutCoinKey, tokenID string, height uint64) ([]jsonresult.ICoinInfo, []*big.Int, error) {
-	b, err := tool.GetListOutputCoinsByRPC(outCoinKey, tokenID, height)
+func GetOutputCoins(outCoinKey *rpc.OutCoinKey, tokenID string, height uint64) ([]jsonresult.ICoinInfo, []*big.Int, error) {
+	b, err := rpc.GetListOutputCoinsByRPC(outCoinKey, tokenID, height)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -23,8 +24,8 @@ func (tool *DebugTool) GetOutputCoins(outCoinKey *OutCoinKey, tokenID string, he
 //CheckCoinsSpent checks if the provided serial numbers have been spent or not.
 //
 //Returned result in boolean list.
-func (tool *DebugTool) CheckCoinsSpent(shardID byte, tokenID string, snList []string) ([]bool, error) {
-	b, err := tool.HasSerialNumberByRPC(shardID, tokenID, snList)
+func CheckCoinsSpent(shardID byte, tokenID string, snList []string) ([]bool, error) {
+	b, err := rpc.HasSerialNumberByRPC(shardID, tokenID, snList)
 	if err != nil {
 		return []bool{}, err
 	}
@@ -48,18 +49,19 @@ func (tool *DebugTool) CheckCoinsSpent(shardID byte, tokenID string, snList []st
 }
 
 //GetUnspentOutputCoins retrieves all unspent coins of a private key, without sending the private key to the remote full node.
-func (tool *DebugTool) GetUnspentOutputCoins(privateKey, tokenID string, height uint64) ([]coin.PlainCoin, []*big.Int, error) {
+func GetUnspentOutputCoins(privateKey, tokenID string, height uint64) ([]coin.PlainCoin, []*big.Int, error) {
 	keyWallet, err := wallet.Base58CheckDeserialize(privateKey)
 	if err != nil {
 		return nil, nil, err
 	}
+
 	outCoinKey, err := NewOutCoinKeyFromPrivateKey(privateKey)
 	if err != nil {
 		return nil, nil, err
 	}
 	outCoinKey.SetReadonlyKey("") // call this if you do not want the remote full node to decrypt your coin
 
-	listOutputCoins, _, err := tool.GetOutputCoins(outCoinKey, tokenID, height)
+	listOutputCoins, _, err := GetOutputCoins(outCoinKey, tokenID, height)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -76,7 +78,7 @@ func (tool *DebugTool) GetUnspentOutputCoins(privateKey, tokenID string, height 
 	}
 
 	shardID := common.GetShardIDFromLastByte(keyWallet.KeySet.PaymentAddress.Pk[len(keyWallet.KeySet.PaymentAddress.Pk)-1])
-	checkSpentList, err := tool.CheckCoinsSpent(shardID, tokenID, listKeyImages)
+	checkSpentList, err := CheckCoinsSpent(shardID, tokenID, listKeyImages)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -92,8 +94,8 @@ func (tool *DebugTool) GetUnspentOutputCoins(privateKey, tokenID string, height 
 }
 
 //GetBalance retrieves balance of a private key without sending this private key to the remote full node.
-func (tool *DebugTool) GetBalance(privateKey, tokenID string) (uint64, error) {
-	unspentCoins, _, err := tool.GetUnspentOutputCoins(privateKey, tokenID, 0)
+func GetBalance(privateKey, tokenID string) (uint64, error) {
+	unspentCoins, _, err := GetUnspentOutputCoins(privateKey, tokenID, 0)
 	if err != nil {
 		return 0, err
 	}
@@ -105,143 +107,3 @@ func (tool *DebugTool) GetBalance(privateKey, tokenID string) (uint64, error) {
 
 	return balance, nil
 }
-
-//===================== OUTPUT COINS RPC =====================//
-//These RPCs return raw JSON bytes.
-
-//GetListOutputCoinsByRPC retrieves list of output coins of an OutCoinKey and returns the result in raw json bytes.
-func (tool *DebugTool) GetListOutputCoinsByRPC(outCoinKey *OutCoinKey, tokenID string, h uint64) ([]byte, error) {
-	if len(tool.url) == 0 {
-		return []byte{}, errors.New("Debugtool has not set mainnet or testnet")
-	}
-
-	query := fmt.Sprintf(`{
-		"jsonrpc": "1.0",
-		"method": "listoutputcoins",
-		"params": [
-			0,
-			999999,
-			[
-				{
-			  "PaymentAddress": "%s",
-			  "OTASecretKey": "%s",
-			  "ReadonlyKey" : "%s",
-			  "StartHeight": %d
-				}
-			],
-		  "%s"
-		  ],
-		"id": 1
-	}`, outCoinKey.paymentAddress, outCoinKey.otaKey, outCoinKey.readonlyKey, h, tokenID)
-
-	return tool.SendPostRequestWithQuery(query)
-}
-
-//GetListOutputCoinsCachedByRPC retrieves list of output coins (which have been cached at the fullnode) of an OutCoinKey and returns the result in raw json bytes.
-func (tool *DebugTool) GetListOutputCoinsCachedByRPC(privKeyStr, tokenID string, h uint64) ([]byte, error) {
-	if len(tool.url) == 0 {
-		return []byte{}, errors.New("Debugtool has not set mainnet or testnet")
-	}
-
-	keyWallet, _ := wallet.Base58CheckDeserialize(privKeyStr)
-	keyWallet.KeySet.InitFromPrivateKey(&keyWallet.KeySet.PrivateKey)
-	paymentAddStr := keyWallet.Base58CheckSerialize(wallet.PaymentAddressType)
-	otaSecretKey := keyWallet.Base58CheckSerialize(wallet.OTAKeyType)
-	viewingKeyStr := keyWallet.Base58CheckSerialize(wallet.ReadonlyKeyType)
-
-	query := fmt.Sprintf(`{
-		"jsonrpc": "1.0",
-		"method": "listoutputcoinsfromcache",
-		"params": [
-			0,
-			999999,
-			[
-				{
-			  "PaymentAddress": "%s",
-			  "OTASecretKey": "%s",
-			  "ReadonlyKey" : "%s",
-			  "StartHeight": %d
-				}
-			],
-		  "%s"
-		  ],
-		"id": 1
-	}`, paymentAddStr, otaSecretKey, viewingKeyStr, h, tokenID)
-
-	//fmt.Println("==============")
-
-	return tool.SendPostRequestWithQuery(query)
-}
-
-//ListUnspentOutputCoinsByRPC retrieves list of output coins of an OutCoinKey and returns the result in raw json bytes.
-//
-//NOTE: PrivateKey must be supplied.
-func (tool *DebugTool) ListUnspentOutputCoinsByRPC(privKeyStr string) ([]byte, error) {
-	if len(tool.url) == 0 {
-		return []byte{}, errors.New("Debugtool has not set mainnet or testnet")
-	}
-
-	query := fmt.Sprintf(`{
-	   "jsonrpc":"1.0",
-	   "method":"listunspentoutputcoins",
-	   "params":[
-		  0,
-		  999999,
-		  [
-			 {
-				"PrivateKey":"%s",
-				"StartHeight": 0
-			 }
-
-		  ]
-	   ],
-	   "id":1
-	}`, privKeyStr)
-
-	return tool.SendPostRequestWithQuery(query)
-}
-
-//ListPrivacyCustomTokenByRPC lists all tokens currently present on the blockchain
-func (tool *DebugTool) ListPrivacyCustomTokenByRPC() ([]byte, error) {
-	query := `{
-		"id": 1,
-		"jsonrpc": "1.0",
-		"method": "listprivacycustomtoken",
-		"params": []
-	}`
-	return tool.SendPostRequestWithQuery(query)
-}
-
-//HasSerialNumberByRPC checks if the provided serial numbers have been spent or not.
-//
-//Returned result in raw json bytes.
-func (tool *DebugTool) HasSerialNumberByRPC(shardID byte, tokenID string, snList []string) ([]byte, error) {
-	if len(snList) == 0 {
-		return nil, errors.New("no serial number provided to be checked")
-	}
-	snQueryList := make([]string, 0)
-	for _, sn := range snList {
-		snQueryList = append(snQueryList, fmt.Sprintf(`"%s"`, sn))
-	}
-
-	addr := CreatePaymentAddress(shardID)
-
-	method := "hasserialnumbers"
-
-	params := make([]interface{}, 0)
-	params = append(params, addr)
-	params = append(params, snList)
-	params = append(params, tokenID)
-
-	request := CreateJsonRequest("1.0", method, params, 1)
-
-	query, err := json.Marshal(request)
-	if err != nil {
-		return nil, err
-	}
-
-	return tool.SendPostRequestWithQuery(string(query))
-
-}
-
-//===================== END OF OUTPUT COINS RPC =====================//

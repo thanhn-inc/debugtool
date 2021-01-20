@@ -6,37 +6,13 @@ import (
 	"github.com/thanhn-inc/debugtool/common"
 	"github.com/thanhn-inc/debugtool/common/base58"
 	"github.com/thanhn-inc/debugtool/privacy/coin"
-	"github.com/thanhn-inc/debugtool/rpcserver/jsonresult"
+	"github.com/thanhn-inc/debugtool/rpchandler/jsonresult"
+	"github.com/thanhn-inc/debugtool/rpchandler/rpc"
 	"github.com/thanhn-inc/debugtool/wallet"
 	"math/big"
 )
 
-//OutCoinKey is used to retrieve output coins via RPC.
-//
-//Payment address must always be present. Other fields are optional
-type OutCoinKey struct {
-	paymentAddress string
-	otaKey         string
-	readonlyKey    string
-}
-
-func (outCoinKey *OutCoinKey) SetOTAKey(otaKey string) {
-	outCoinKey.otaKey = otaKey
-}
-
-func (outCoinKey *OutCoinKey) SetPaymentAddress(paymentAddress string) {
-	outCoinKey.paymentAddress = paymentAddress
-}
-
-func (outCoinKey *OutCoinKey) SetReadonlyKey(readonlyKey string) {
-	outCoinKey.readonlyKey = readonlyKey
-}
-
-func NewOutCoinKey(paymentAddress, otaKey, readonlyKey string) *OutCoinKey {
-	return &OutCoinKey{paymentAddress: paymentAddress, otaKey: otaKey, readonlyKey: readonlyKey}
-}
-
-func NewOutCoinKeyFromPrivateKey(privateKey string) (*OutCoinKey, error) {
+func NewOutCoinKeyFromPrivateKey(privateKey string) (*rpc.OutCoinKey, error) {
 	keyWallet, err := wallet.Base58CheckDeserialize(privateKey)
 	if err != nil {
 		return nil, err
@@ -50,7 +26,7 @@ func NewOutCoinKeyFromPrivateKey(privateKey string) (*OutCoinKey, error) {
 	otaSecretKey := keyWallet.Base58CheckSerialize(wallet.OTAKeyType)
 	viewingKeyStr := keyWallet.Base58CheckSerialize(wallet.ReadonlyKeyType)
 
-	return &OutCoinKey{paymentAddress: paymentAddStr, otaKey: otaSecretKey, readonlyKey: viewingKeyStr}, nil
+	return rpc.NewOutCoinKey(paymentAddStr, otaSecretKey, viewingKeyStr), err
 }
 
 func ParseCoinFromJsonResponse(b []byte) ([]jsonresult.ICoinInfo, []*big.Int, error) {
@@ -86,6 +62,7 @@ func GetListDecryptedCoins(privateKey string, listOutputCoins []jsonresult.ICoin
 	if err != nil {
 		return nil, nil, err
 	}
+	keySet := keyWallet.KeySet
 
 	listDecyptedOutCoins := make([]coin.PlainCoin, 0)
 	listKeyImages := make([]string, 0)
@@ -97,7 +74,7 @@ func GetListDecryptedCoins(privateKey string, listOutputCoins []jsonresult.ICoin
 					return nil, nil, errors.New("invalid CoinV1")
 				}
 
-				decryptedCoin, err := tmpCoin.Decrypt(&keyWallet.KeySet)
+				decryptedCoin, err := tmpCoin.Decrypt(&keySet)
 				if err != nil {
 					return nil, nil, err
 				}
