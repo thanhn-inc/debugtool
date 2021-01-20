@@ -42,6 +42,7 @@ type OutCoin struct {
 	Index                string `json:"Index"`
 	PublicKey            string `json:"PublicKey"`
 	Commitment           string `json:"Commitment"`
+	CoinCommitment       string `json:"CoinCommitment"`
 	SNDerivator          string `json:"SNDerivator"`
 	KeyImage             string `json:"KeyImage"`
 	Randomness           string `json:"Randomness"`
@@ -96,15 +97,23 @@ func NewOutCoin(outCoin ICoinInfo) OutCoin {
 		randomness = base58.Base58Check{}.Encode(outCoin.GetRandomness().ToBytesS(), common.ZeroByte)
 	}
 
+	info := ""
+	if len(outCoin.GetInfo()) != 0 {
+		info = EncodeBase58Check(outCoin.GetInfo())
+	} else {
+		info = "13PMpZ4"
+	}
+
 	result := OutCoin{
-		Version:     strconv.FormatUint(uint64(outCoin.GetVersion()), 10),
-		PublicKey:   publicKey,
-		Value:       strconv.FormatUint(outCoin.GetValue(), 10),
-		Info:        EncodeBase58Check(outCoin.GetInfo()),
-		Commitment:  commitment,
-		SNDerivator: snd,
-		KeyImage:    keyImage,
-		Randomness:  randomness,
+		Version:        strconv.FormatUint(uint64(outCoin.GetVersion()), 10),
+		PublicKey:      publicKey,
+		Value:          strconv.FormatUint(outCoin.GetValue(), 10),
+		Info:           info,
+		Commitment:     commitment,
+		CoinCommitment: commitment,
+		SNDerivator:    snd,
+		KeyImage:       keyImage,
+		Randomness:     randomness,
 	}
 
 	if outCoin.GetCoinDetailEncrypted() != nil {
@@ -157,7 +166,18 @@ func NewCoinFromJsonOutCoin(jsonOutCoin OutCoin) (ICoinInfo, *big.Int, error) {
 	}
 
 	if len(jsonOutCoin.Commitment) == 0 {
-		cm = nil
+		if len(jsonOutCoin.CoinCommitment) == 0 {
+			cm = nil
+		} else {
+			cmInbytes, _, err := base58.Base58Check{}.Decode(jsonOutCoin.CoinCommitment)
+			if err != nil {
+				return nil, nil, err
+			}
+			cm, err = new(privacy.Point).FromBytesS(cmInbytes)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
 	} else {
 		cmInbytes, _, err := base58.Base58Check{}.Decode(jsonOutCoin.Commitment)
 		if err != nil {
