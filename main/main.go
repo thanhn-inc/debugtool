@@ -322,7 +322,7 @@ func main() {
 				continue
 			}
 
-			txHash, err := debugtool.CreateAndSendRawTransaction(privateKey, []string{paymentAddress}, []uint64{uint64(amount)}, 1)
+			txHash, err := debugtool.CreateAndSendRawTransaction(privateKey, []string{paymentAddress}, []uint64{uint64(amount)}, 1, nil)
 			if err != nil {
 				fmt.Println("CreateAndSendRawTransaction returns an error:", err)
 				continue
@@ -330,6 +330,41 @@ func main() {
 
 			fmt.Printf("CreateAndSendRawTransaction succeeded. TxHash: %v.\n", txHash)
 		}
+		if args[0] == "uot" {
+			if len(args) < 2 {
+				fmt.Println("Not enough param for unspentouttoken")
+				continue
+			}
+			tokenID := common.PRVIDStr
+			if len(args) > 2 {
+				tokenID = args[2]
+				if len(args[2]) < 10 {
+					tokenID = tokenIDs[args[2]] //Make sure you have the right token name
+				}
+			}
+
+			var privateKey string
+			if len(args[1]) < 3 {
+				index, err := strconv.ParseInt(args[1], 10, 32)
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
+				privateKey = privateKeys[index]
+			} else {
+				privateKey = args[1]
+			}
+			bi := big.NewInt(0)
+			if len(args) >= 4 {
+				_, ok := bi.SetString(args[3], 10)
+				if !ok {
+					continue
+				}
+			}
+
+			GetUnspentOutputToken(privateKey, tokenID, bi.Uint64())
+		}
+
 
 		//TOKEN RPCs
 		if args[0] == "inittoken" {
@@ -501,42 +536,6 @@ func main() {
 			fmt.Println(privateKey, payment)
 		}
 
-		if args[0] == "uot" {
-			if len(args) < 2 {
-				fmt.Println("Not enough param for unspentouttoken")
-				continue
-			}
-			tokenID := common.PRVIDStr
-			if len(args) > 2 {
-				tokenID = args[2]
-				if len(args[2]) < 10 {
-					tokenID = tokenIDs[args[2]] //Make sure you have the right token name
-				}
-			}
-
-			var privateKey string
-			if len(args[1]) < 3 {
-				index, err := strconv.ParseInt(args[1], 10, 32)
-				if err != nil {
-					fmt.Println(err)
-					continue
-				}
-				privateKey = privateKeys[index]
-			} else {
-				privateKey = args[1]
-			}
-			bi := big.NewInt(0)
-			if len(args) >= 4 {
-				_, ok := bi.SetString(args[3], 10)
-				if !ok {
-					continue
-				}
-			}
-
-			GetUnspentOutputToken(privateKey, tokenID, bi.Uint64())
-		}
-
-
 		//Blockchain
 		if args[0] == "info" {
 			GetBlockchainInfo()
@@ -552,6 +551,80 @@ func main() {
 		}
 		if args[0] == "txhash" {
 			GetTxByHash(args[1])
+		}
+
+		//PDEX
+		if args[0] == "pdetradeprv" {
+			if len(args) < 4 {
+				fmt.Println("Not enough param for pdetradeprv")
+				continue
+			}
+
+			privateKey := args[1]
+			if len(args[1]) < 3 {
+				index, err := strconv.ParseInt(args[1], 10, 32)
+				if err != nil {
+					panic(err)
+				}
+				privateKey = privateKeys[index]
+			}
+
+			tokenID := args[2]
+			if len(args[2]) < 10 {
+				tokenID = tokenIDs[args[2]]
+			}
+
+			amount, err := strconv.ParseInt(args[3], 10, 32)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			txHash, err := debugtool.CreateAndSendPDETradeTransaction(privateKey, common.PRVIDStr, tokenID, uint64(amount))
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			fmt.Printf("CreateAndSendPDETradeTransaction succeeded. TxHash: %v.\n", txHash)
+		}
+		if args[0] == "pdecontributeprv" {
+			if len(args) < 3 {
+				fmt.Println("Not enough param for pdetradeprv")
+				continue
+			}
+
+			privateKey := args[1]
+			if len(args[1]) < 3 {
+				index, err := strconv.ParseInt(args[1], 10, 32)
+				if err != nil {
+					panic(err)
+				}
+				privateKey = privateKeys[index]
+			}
+
+			amount, err := strconv.ParseInt(args[2], 10, 32)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			tokenID := common.PRVIDStr
+			if len(args) > 3 {
+				tokenID = args[3]
+				if len(tokenID) < 10 {
+					tokenID = tokenIDs[tokenID]
+				}
+			}
+
+
+			txHash, err := debugtool.CreateAndSendPDEContributeTransaction(privateKey, "newpair", tokenID, uint64(amount))
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			fmt.Printf("CreateAndSendPDETradeTransaction succeeded. TxHash: %v.\n", txHash)
 		}
 
 		//General
