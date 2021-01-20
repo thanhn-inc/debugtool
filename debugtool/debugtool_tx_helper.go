@@ -15,7 +15,7 @@ import (
 	"sort"
 )
 
-const DefaultPRVFee = uint64(100)
+const DefaultPRVFee = uint64(60)
 
 //Create payment info lists based on the provided address list and corresponding amount list.
 func CreatePaymentInfos(addrList []string, amountList []uint64) ([]*privacy.PaymentInfo, error) {
