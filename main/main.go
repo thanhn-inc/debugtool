@@ -7,6 +7,8 @@ import (
 	"github.com/thanhn-inc/debugtool/common/base58"
 	"github.com/thanhn-inc/debugtool/debugtool"
 	"github.com/thanhn-inc/debugtool/privacy"
+	"github.com/thanhn-inc/debugtool/rpchandler"
+	"github.com/thanhn-inc/debugtool/rpchandler/rpc"
 	"github.com/thanhn-inc/debugtool/wallet"
 	"math/big"
 	"os"
@@ -14,9 +16,8 @@ import (
 	"strings"
 )
 //Misc
-func SwitchPort(newPort string) *debugtool.DebugTool {
-	tool := new(debugtool.DebugTool).InitLocal(newPort)
-	return tool
+func SwitchPort(newPort string) {
+	rpchandler.Server = new(rpchandler.RPCServer).InitLocal(newPort)
 }
 func GetShardIDFromPrivateKey(privateKey string) byte {
 	pubkey := privateKeyToPublicKey(privateKey)
@@ -67,7 +68,7 @@ func GenKeySet(b []byte) (string, string, string) {
 }
 
 //Outcoins
-func GetPRVOutPutCoin(tool *debugtool.DebugTool, privkey string, height uint64) {
+func GetPRVOutPutCoin(privkey string, height uint64) {
 	fmt.Println("========== GET PRV OUTPUT COIN ==========")
 	outCoinKey, err := debugtool.NewOutCoinKeyFromPrivateKey(privkey)
 	if err != nil{
@@ -76,7 +77,7 @@ func GetPRVOutPutCoin(tool *debugtool.DebugTool, privkey string, height uint64) 
 	}
 	outCoinKey.SetReadonlyKey("") //Call this if you dont want the full node to decrypt your amount.
 
-	b, err := tool.GetListOutputCoinsByRPC(outCoinKey, common.PRVIDStr, height)
+	b, err := rpc.GetListOutputCoinsByRPC(outCoinKey, common.PRVIDStr, height)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -85,9 +86,9 @@ func GetPRVOutPutCoin(tool *debugtool.DebugTool, privkey string, height uint64) 
 	fmt.Println(string(b))
 	fmt.Println("========== END GET PRV OUTPUT COIN ==========")
 }
-func GetUnspentOutputToken(tool *debugtool.DebugTool, privKey string, tokenID string, height uint64) {
+func GetUnspentOutputToken(privKey string, tokenID string, height uint64) {
 	fmt.Println("========== GET UNSPENT OUTPUT TOKEN ==========")
-	listUnspentCoins, _, err := tool.GetUnspentOutputCoins(privKey, tokenID, height)
+	listUnspentCoins, _, err := debugtool.GetUnspentOutputCoins(privKey, tokenID, height)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -99,54 +100,54 @@ func GetUnspentOutputToken(tool *debugtool.DebugTool, privKey string, tokenID st
 
 	fmt.Println("========== END UNSPENT OUTPUT TOKEN ==========")
 }
-func GetBalance(tool *debugtool.DebugTool, privkey, tokenID string) {
-	fmt.Println("========== GET BALANCE ==========")
-	b, _ := tool.GetBalance(privkey, tokenID)
+func GetBalance(privkey, tokenID string) {
+	fmt.Println("========== GET BALACE ==N========")
+	b, _ := debugtool.GetBalance(privkey, tokenID)
 	fmt.Println(string(b))
 	fmt.Println("========== END GET BALANCE ==========")
 }
 
 //Transactions
-func TransferPRV(tool *debugtool.DebugTool, fromPrivKey, paymentAddress, amount string) {
+func TransferPRV(tool *rpchandler.RPCServer, fromPrivKey, paymentAddress, amount string) {
 	fmt.Println("========== TRANSFER PRV  ==========")
-	b, _ := tool.CreateAndSendTransactionFromAToB(fromPrivKey, paymentAddress, amount)
+	b, _ := rpc.CreateAndSendTransactionFromAToB(fromPrivKey, paymentAddress, amount)
 	fmt.Println(string(b))
 	fmt.Println("========== END TRANSFER PRV  ==========")
 }
 
-func sendTx(tool *debugtool.DebugTool) {
-	b, _ := tool.CreateAndSendTransaction()
+func sendTx(tool *rpchandler.RPCServer) {
+	b, _ := rpc.CreateAndSendTransaction()
 	fmt.Println(string(b))
 }
 
 //Blockchain
-func GetBlockchainInfo(tool *debugtool.DebugTool) {
+func GetBlockchainInfo(tool *rpchandler.RPCServer) {
 	fmt.Println("========== GET BLOCKCHAIN INFO ==========")
-	b, _ := tool.GetBlockchainInfo()
+	b, _ := rpc.GetBlockchainInfo()
 	fmt.Println(string(b))
 	fmt.Println("========== END GET BLOCKCHAIN INFO ==========")
 }
-func GetBeaconBestState(tool *debugtool.DebugTool) {
+func GetBeaconBestState(tool *rpchandler.RPCServer) {
 	fmt.Println("========== GET BEACON BEST STATE INFO ==========")
-	b, _ := tool.GetBeaconBestState()
+	b, _ := rpc.GetBeaconBestState()
 	fmt.Println(string(b))
 	fmt.Println("========== END GET BEACON BEST STATE INFO ==========")
 }
-func GetBestBlock(tool *debugtool.DebugTool) {
+func GetBestBlock(tool *rpchandler.RPCServer) {
 	fmt.Println("========== GET BEST BLOCK INFO ==========")
-	b, _ := tool.GetBestBlock()
+	b, _ := rpc.GetBestBlock()
 	fmt.Println(string(b))
 	fmt.Println("========== END GET BEST BLOCK INFO ==========")
 }
-func GetRawMempool(tool *debugtool.DebugTool) {
+func GetRawMempool(tool *rpchandler.RPCServer) {
 	fmt.Println("========== GET RAW MEMPOOL ==========")
-	b, _ := tool.GetRawMempool()
+	b, _ := rpc.GetRawMempool()
 	fmt.Println(string(b))
 	fmt.Println("========== END GET RAW MEMPOOL ==========")
 }
-func GetTxByHash(tool *debugtool.DebugTool, txHash string) {
+func GetTxByHash(tool *rpchandler.RPCServer, txHash string) {
 	fmt.Println("========== GET TX BY HASH ==========")
-	b, _ := tool.GetTransactionByHash(txHash)
+	b, _ := rpc.GetTransactionByHash(txHash)
 	fmt.Println(string(b))
 	fmt.Println("========== END GET TX BY HASH ==========")
 }
@@ -174,10 +175,13 @@ func main() {
 	tokenIDs["BTC"] = "b832e5d3b1f01a4f0623f7fe91d6673461e1f5d37d91fe78c5c2e6183ff39696"
 	tokenIDs["PRV"] = common.PRVIDStr
 
-	//tool := new(debugtool.DebugTool).InitLocal("9334")
-	//tool := new(debugtool.DebugTool).InitMainnet()
-	//tool := new(debugtool.DebugTool).InitDevNet()
-	tool := new(debugtool.DebugTool).InitTestnet()
+	//rpchandler.Server = new(rpchandler.RPCServer).InitLocal("9334")
+	rpchandler.Server = new(rpchandler.RPCServer).InitTestnet()
+
+	//tool := new(rpchandler.RPCServer).InitLocal("9334")
+	//tool := new(rpchandler.RPCServer).InitMainnet()
+	//tool := new(rpchandler.RPCServer).InitDevNet()
+	tool := new(rpchandler.RPCServer).InitTestnet()
 
 	reader := bufio.NewReader(os.Stdin)
 
@@ -191,24 +195,24 @@ func main() {
 
 		//Init network
 		if args[0] == "port" {
-			tool = SwitchPort(args[1])
-			fmt.Printf("New target: %v-%v\n", args[0], tool.GetURL())
+			SwitchPort(args[1])
+			fmt.Printf("New target: %v-%v\n", args[0], rpchandler.Server.GetURL())
 		}
 		if args[0] == "inittestnet" {
-			tool = new(debugtool.DebugTool).InitTestnet()
-			fmt.Printf("New target: %v-%v\n", args[0], tool.GetURL())
+			tool = new(rpchandler.RPCServer).InitTestnet()
+			fmt.Printf("New target: %v-%v\n", args[0], rpchandler.Server.GetURL())
 		}
 		if args[0] == "initdevnet" {
-			tool = new(debugtool.DebugTool).InitDevNet()
-			fmt.Printf("New target: %v-%v\n", args[0], tool.GetURL())
+			tool = new(rpchandler.RPCServer).InitDevNet()
+			fmt.Printf("New target: %v-%v\n", args[0], rpchandler.Server.GetURL())
 		}
 		if args[0] == "initmainnet" {
-			tool = new(debugtool.DebugTool).InitMainnet()
-			fmt.Printf("New target: %v-%v\n", args[0], tool.GetURL())
+			tool = new(rpchandler.RPCServer).InitMainnet()
+			fmt.Printf("New target: %v-%v\n", args[0], rpchandler.Server.GetURL())
 		}
 		if args[0] == "initlocal" {
-			tool = new(debugtool.DebugTool).InitLocal(args[1])
-			fmt.Printf("New target: %v-%v\n", args[0], tool.GetURL())
+			tool = new(rpchandler.RPCServer).InitLocal(args[1])
+			fmt.Printf("New target: %v-%v\n", args[0], rpchandler.Server.GetURL())
 		}
 
 		//PRV RPCs
@@ -234,7 +238,7 @@ func main() {
 				}
 			}
 
-			GetPRVOutPutCoin(tool, privateKey, bi.Uint64())
+			GetPRVOutPutCoin(privateKey, bi.Uint64())
 		}
 		if args[0] == "balance" {
 			var privateKey string
@@ -253,7 +257,7 @@ func main() {
 				privateKey = args[1]
 			}
 
-			balance, err := tool.GetBalance(privateKey, common.PRVIDStr)
+			balance, err := debugtool.GetBalance(privateKey, common.PRVIDStr)
 			if err != nil{
 				fmt.Println(err)
 				continue
@@ -293,7 +297,19 @@ func main() {
 				paymentAddress = args[2]
 			}
 
-			TransferPRV(tool, privateKey, paymentAddress, args[3])
+			amount, err := strconv.ParseInt(args[3], 10, 32)
+			if err != nil {
+				fmt.Println("cannot parse amount", args[3])
+				continue
+			}
+
+			b, err := debugtool.CreateRawTransaction(privateKey, []string{paymentAddress}, []uint64{uint64(amount)}, 1)
+			if err != nil {
+				fmt.Println("createrawtransaction returns an error:", err)
+				continue
+			}
+
+			fmt.Println(string(b))
 		}
 
 		//Keys
@@ -367,7 +383,7 @@ func main() {
 				}
 			}
 
-			GetUnspentOutputToken(tool, privateKey, tokenID, bi.Uint64())
+			GetUnspentOutputToken(privateKey, tokenID, bi.Uint64())
 		}
 
 
@@ -386,6 +402,18 @@ func main() {
 		}
 		if args[0] == "txhash" {
 			GetTxByHash(tool, args[1])
+		}
+
+		//General
+		if args[0] == "shard" {
+			activeShards, err := debugtool.GetActiveShard()
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			fmt.Println("Number of active shards:", activeShards)
+			common.MaxShardNumber = activeShards
 		}
 
 		if args[0] == "dec58" {
