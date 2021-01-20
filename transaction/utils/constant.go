@@ -16,6 +16,10 @@ const (
 	MyCommitmentIndices = "myCommitmentIndices"
 )
 
+const (
+	NativeParams = "nativeParams"
+	TokenParams  = "tokenParams"
+)
 
 const (
 	CustomTokenInit = iota
