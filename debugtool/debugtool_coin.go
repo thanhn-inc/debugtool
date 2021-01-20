@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/thanhn-inc/debugtool/common"
 	"github.com/thanhn-inc/debugtool/privacy/coin"
+	"github.com/thanhn-inc/debugtool/rpchandler"
 	"github.com/thanhn-inc/debugtool/rpchandler/jsonresult"
 	"github.com/thanhn-inc/debugtool/rpchandler/rpc"
 	"github.com/thanhn-inc/debugtool/wallet"
@@ -30,7 +31,7 @@ func CheckCoinsSpent(shardID byte, tokenID string, snList []string) ([]bool, err
 		return []bool{}, err
 	}
 
-	response, err := ParseResponse(b)
+	response, err := rpchandler.ParseResponse(b)
 	if err != nil {
 		return []bool{}, err
 	}

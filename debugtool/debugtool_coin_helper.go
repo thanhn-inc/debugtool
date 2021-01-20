@@ -6,6 +6,7 @@ import (
 	"github.com/thanhn-inc/debugtool/common"
 	"github.com/thanhn-inc/debugtool/common/base58"
 	"github.com/thanhn-inc/debugtool/privacy/coin"
+	"github.com/thanhn-inc/debugtool/rpchandler"
 	"github.com/thanhn-inc/debugtool/rpchandler/jsonresult"
 	"github.com/thanhn-inc/debugtool/rpchandler/rpc"
 	"github.com/thanhn-inc/debugtool/wallet"
@@ -30,7 +31,7 @@ func NewOutCoinKeyFromPrivateKey(privateKey string) (*rpc.OutCoinKey, error) {
 }
 
 func ParseCoinFromJsonResponse(b []byte) ([]jsonresult.ICoinInfo, []*big.Int, error) {
-	response, err := ParseResponse(b)
+	response, err := rpchandler.ParseResponse(b)
 	if err != nil {
 		return nil, nil, err
 	}

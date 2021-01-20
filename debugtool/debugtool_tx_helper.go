@@ -73,8 +73,6 @@ func ChooseBestCoinsByAmount(coinList []privacy.PlainCoin, requiredAmount uint64
 		}
 	}
 
-	fmt.Printf("totalChosenAmount: %v, requireAmount: %v\n", totalChosenAmount, requiredAmount)
-
 	if totalChosenAmount < requiredAmount {
 		totalChosenAmount += coinList[len(coinList)-1].GetValue()
 		coinsToSpend = append(coinsToSpend, coinList[len(coinList)-1])
@@ -82,8 +80,7 @@ func ChooseBestCoinsByAmount(coinList []privacy.PlainCoin, requiredAmount uint64
 			return nil, errors.New("not enough coin to spend")
 		}
 	}
-
-	fmt.Println("number of coins to spend:", len(coinsToSpend))
+	fmt.Printf("totalChosenAmount: %v, requiredAmount: %v, number of coins: %v.\n", totalChosenAmount, requiredAmount, len(coinsToSpend))
 
 	return coinsToSpend, nil
 }

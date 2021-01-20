@@ -115,37 +115,37 @@ func TransferPRV(tool *rpchandler.RPCServer, fromPrivKey, paymentAddress, amount
 	fmt.Println("========== END TRANSFER PRV  ==========")
 }
 
-func sendTx(tool *rpchandler.RPCServer) {
+func sendTx() {
 	b, _ := rpc.CreateAndSendTransaction()
 	fmt.Println(string(b))
 }
 
 //Blockchain
-func GetBlockchainInfo(tool *rpchandler.RPCServer) {
+func GetBlockchainInfo() {
 	fmt.Println("========== GET BLOCKCHAIN INFO ==========")
 	b, _ := rpc.GetBlockchainInfo()
 	fmt.Println(string(b))
 	fmt.Println("========== END GET BLOCKCHAIN INFO ==========")
 }
-func GetBeaconBestState(tool *rpchandler.RPCServer) {
+func GetBeaconBestState() {
 	fmt.Println("========== GET BEACON BEST STATE INFO ==========")
 	b, _ := rpc.GetBeaconBestState()
 	fmt.Println(string(b))
 	fmt.Println("========== END GET BEACON BEST STATE INFO ==========")
 }
-func GetBestBlock(tool *rpchandler.RPCServer) {
+func GetBestBlock() {
 	fmt.Println("========== GET BEST BLOCK INFO ==========")
 	b, _ := rpc.GetBestBlock()
 	fmt.Println(string(b))
 	fmt.Println("========== END GET BEST BLOCK INFO ==========")
 }
-func GetRawMempool(tool *rpchandler.RPCServer) {
+func GetRawMempool() {
 	fmt.Println("========== GET RAW MEMPOOL ==========")
 	b, _ := rpc.GetRawMempool()
 	fmt.Println(string(b))
 	fmt.Println("========== END GET RAW MEMPOOL ==========")
 }
-func GetTxByHash(tool *rpchandler.RPCServer, txHash string) {
+func GetTxByHash(txHash string) {
 	fmt.Println("========== GET TX BY HASH ==========")
 	b, _ := rpc.GetTransactionByHash(txHash)
 	fmt.Println(string(b))
@@ -175,13 +175,13 @@ func main() {
 	tokenIDs["BTC"] = "b832e5d3b1f01a4f0623f7fe91d6673461e1f5d37d91fe78c5c2e6183ff39696"
 	tokenIDs["PRV"] = common.PRVIDStr
 
-	//rpchandler.Server = new(rpchandler.RPCServer).InitLocal("9334")
-	rpchandler.Server = new(rpchandler.RPCServer).InitTestnet()
+	rpchandler.Server = new(rpchandler.RPCServer).InitLocal("9334")
+	//rpchandler.Server = new(rpchandler.RPCServer).InitTestnet()
 
 	//tool := new(rpchandler.RPCServer).InitLocal("9334")
 	//tool := new(rpchandler.RPCServer).InitMainnet()
 	//tool := new(rpchandler.RPCServer).InitDevNet()
-	tool := new(rpchandler.RPCServer).InitTestnet()
+	//tool := new(rpchandler.RPCServer).InitTestnet()
 
 	reader := bufio.NewReader(os.Stdin)
 
@@ -199,25 +199,25 @@ func main() {
 			fmt.Printf("New target: %v-%v\n", args[0], rpchandler.Server.GetURL())
 		}
 		if args[0] == "inittestnet" {
-			tool = new(rpchandler.RPCServer).InitTestnet()
+			rpchandler.Server = new(rpchandler.RPCServer).InitTestnet()
 			fmt.Printf("New target: %v-%v\n", args[0], rpchandler.Server.GetURL())
 		}
 		if args[0] == "initdevnet" {
-			tool = new(rpchandler.RPCServer).InitDevNet()
+			rpchandler.Server = new(rpchandler.RPCServer).InitDevNet()
 			fmt.Printf("New target: %v-%v\n", args[0], rpchandler.Server.GetURL())
 		}
 		if args[0] == "initmainnet" {
-			tool = new(rpchandler.RPCServer).InitMainnet()
+			rpchandler.Server = new(rpchandler.RPCServer).InitMainnet()
 			fmt.Printf("New target: %v-%v\n", args[0], rpchandler.Server.GetURL())
 		}
 		if args[0] == "initlocal" {
-			tool = new(rpchandler.RPCServer).InitLocal(args[1])
+			rpchandler.Server = new(rpchandler.RPCServer).InitLocal(args[1])
 			fmt.Printf("New target: %v-%v\n", args[0], rpchandler.Server.GetURL())
 		}
 
 		//PRV RPCs
 		if args[0] == "send" {
-			sendTx(tool)
+			sendTx()
 		}
 		if args[0] == "outcoin" {
 			var privateKey string
@@ -303,13 +303,13 @@ func main() {
 				continue
 			}
 
-			b, err := debugtool.CreateRawTransaction(privateKey, []string{paymentAddress}, []uint64{uint64(amount)}, 1)
+			txHash, err := debugtool.CreateAndSendRawTransaction(privateKey, []string{paymentAddress}, []uint64{uint64(amount)}, 1)
 			if err != nil {
-				fmt.Println("createrawtransaction returns an error:", err)
+				fmt.Println("CreateAndSendRawTransaction returns an error:", err)
 				continue
 			}
 
-			fmt.Println(string(b))
+			fmt.Printf("CreateAndSendRawTransaction succeeded. TxHash: %v.\n", txHash)
 		}
 
 		//Keys
@@ -389,19 +389,19 @@ func main() {
 
 		//Blockchain
 		if args[0] == "info" {
-			GetBlockchainInfo(tool)
+			GetBlockchainInfo()
 		}
 		if args[0] == "beaconstate" {
-			GetBeaconBestState(tool)
+			GetBeaconBestState()
 		}
 		if args[0] == "bestblock" {
-			GetBestBlock(tool)
+			GetBestBlock()
 		}
 		if args[0] == "mempool" {
-			GetRawMempool(tool)
+			GetRawMempool()
 		}
 		if args[0] == "txhash" {
-			GetTxByHash(tool, args[1])
+			GetTxByHash(args[1])
 		}
 
 		//General
