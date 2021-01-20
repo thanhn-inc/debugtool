@@ -4,17 +4,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/LampardNguyen234/incognito-wallet/debugtool"
 	"github.com/thanhn-inc/debugtool/common"
 	"github.com/thanhn-inc/debugtool/common/base58"
+	"github.com/thanhn-inc/debugtool/metadata"
 	"github.com/thanhn-inc/debugtool/privacy"
+	"github.com/thanhn-inc/debugtool/rpchandler"
 	"github.com/thanhn-inc/debugtool/rpchandler/rpc"
 	"github.com/thanhn-inc/debugtool/transaction/tx_generic"
 	"github.com/thanhn-inc/debugtool/transaction/tx_ver1"
 	"github.com/thanhn-inc/debugtool/wallet"
 )
 
-func CreateRawTransaction(privateKey string, addrList []string, amountList []uint64, version int8) ([]byte, string, error) {
+func CreateRawTransaction(privateKey string, addrList []string, amountList []uint64, version int8, md metadata.Metadata) ([]byte, string, error) {
 	//Create sender private key from string
 	senderWallet, err := wallet.Base58CheckDeserialize(privateKey)
 	if err != nil {
@@ -47,6 +48,11 @@ func CreateRawTransaction(privateKey string, addrList []string, amountList []uin
 		return nil, "", errors.New(fmt.Sprintf("cannot divide coin: %v", err))
 	}
 
+	hasPrivacy := true
+	if md != nil {
+		hasPrivacy = false
+	}
+
 	if version == 1 {
 		//Choose best coins to spend
 		coinsToSpend, err := ChooseBestCoinsByAmount(coinV1List, totalAmount)
@@ -54,15 +60,18 @@ func CreateRawTransaction(privateKey string, addrList []string, amountList []uin
 			return nil, "", err
 		}
 
-		fmt.Printf("Getting random commitments.\n")
-		//Retrieve commitments and indices
-		kvargs, err := GetRandomCommitments(coinsToSpend, common.PRVIDStr)
-		if err != nil {
-			return nil, "", err
+		var kvargs map[string]interface{}
+		if hasPrivacy {
+			fmt.Printf("Getting random commitments.\n")
+			//Retrieve commitments and indices
+			kvargs, err = GetRandomCommitments(coinsToSpend, common.PRVIDStr)
+			if err != nil {
+				return nil, "", err
+			}
+			fmt.Printf("Finish getting random commitments.\n")
 		}
-		fmt.Printf("Finish getting random commitments.\n")
 
-		txParam := tx_generic.NewTxPrivacyInitParams(&(senderWallet.KeySet.PrivateKey), paymentInfos, coinsToSpend, DefaultPRVFee, true, &common.PRVCoinID, nil, nil, kvargs)
+		txParam := tx_generic.NewTxPrivacyInitParams(&(senderWallet.KeySet.PrivateKey), paymentInfos, coinsToSpend, DefaultPRVFee, hasPrivacy, &common.PRVCoinID, md, nil, kvargs)
 
 		tx := new(tx_ver1.Tx)
 		err = tx.Init(txParam)
@@ -191,9 +200,8 @@ func CreateRawTokenTransaction(privateKey string, addrList []string, amountList 
 	return nil, "", nil
 }
 
-
-func CreateAndSendRawTransaction(privateKey string, addrList []string, amountList []uint64, version int8) (string, error) {
-	encodedTx, txHash, err := CreateRawTransaction(privateKey, addrList, amountList, version)
+func CreateAndSendRawTransaction(privateKey string, addrList []string, amountList []uint64, version int8, md metadata.Metadata) (string, error) {
+	encodedTx, txHash, err := CreateRawTransaction(privateKey, addrList, amountList, version, md)
 	if err != nil {
 		return "", err
 	}
@@ -205,7 +213,7 @@ func CreateAndSendRawTransaction(privateKey string, addrList []string, amountLis
 
 	fmt.Println("SendRawTx:", string(responseInBytes))
 
-	_, err = debugtool.ParseResponse(responseInBytes)
+	_, err = rpchandler.ParseResponse(responseInBytes)
 	if err != nil {
 		return "", err
 	}
@@ -226,7 +234,7 @@ func CreateAndSendRawTokenTransaction(privateKey string, addrList []string, amou
 
 	fmt.Println("SendRawTokenTx:", string(responseInBytes))
 
-	_, err = debugtool.ParseResponse(responseInBytes)
+	_, err = rpchandler.ParseResponse(responseInBytes)
 	if err != nil {
 		return "", err
 	}
