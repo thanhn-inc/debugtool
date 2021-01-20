@@ -11,6 +11,13 @@ const (
 )
 
 const (
+	CommitmentIndices   = "indices"
+	Commitments         = "commitments"
+	MyCommitmentIndices = "myCommitmentIndices"
+)
+
+
+const (
 	CustomTokenInit = iota
 	CustomTokenTransfer
 	CustomTokenCrossShard

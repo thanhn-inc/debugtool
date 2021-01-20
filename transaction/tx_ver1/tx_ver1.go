@@ -160,7 +160,7 @@ func GenerateOutputCoinV1s(paymentInfo []*privacy.PaymentInfo) ([]*privacy.CoinV
 
 func (tx *Tx) initPaymentWitnessParam(params *tx_generic.TxPrivacyInitParams) (*privacy.PaymentWitnessParam, error) {
 	//Get list of decoy indices.
-	tmp, ok := params.Kvargs["indices"]
+	tmp, ok := params.Kvargs[utils.CommitmentIndices]
 	if !ok {
 		return nil, errors.New(fmt.Sprintf("decoy commitment indices not found: %v", params.Kvargs))
 	}
@@ -171,7 +171,7 @@ func (tx *Tx) initPaymentWitnessParam(params *tx_generic.TxPrivacyInitParams) (*
 	}
 
 	//Get list of decoy commitments.
-	tmp, ok = params.Kvargs["commitments"]
+	tmp, ok = params.Kvargs[utils.Commitments]
 	if !ok {
 		return nil, errors.New(fmt.Sprintf("decoy commitment list not found: %v", params.Kvargs))
 	}
@@ -182,7 +182,7 @@ func (tx *Tx) initPaymentWitnessParam(params *tx_generic.TxPrivacyInitParams) (*
 	}
 
 	//Get list of inputcoin indices
-	tmp, ok = params.Kvargs["inputCoinIndices"]
+	tmp, ok = params.Kvargs[utils.MyCommitmentIndices]
 	if !ok {
 		return nil, errors.New(fmt.Sprintf("inputCoin commitment indices not found: %v", params.Kvargs))
 	}
