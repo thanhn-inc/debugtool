@@ -8,7 +8,7 @@ import (
 	"github.com/thanhn-inc/debugtool/common/base58"
 	"github.com/thanhn-inc/debugtool/incognitokey"
 	"github.com/thanhn-inc/debugtool/privacy"
-	"github.com/thanhn-inc/debugtool/rpcserver"
+	"github.com/thanhn-inc/debugtool/rpchandler"
 	"github.com/thanhn-inc/debugtool/wallet"
 )
 
@@ -30,8 +30,8 @@ func RandIntInterval(L, R int) int {
 	return L + r
 }
 
-func ParseResponse(respondInBytes []byte) (*rpcserver.JsonResponse, error) {
-	var respond rpcserver.JsonResponse
+func ParseResponse(respondInBytes []byte) (*rpchandler.JsonResponse, error) {
+	var respond rpchandler.JsonResponse
 	err := json.Unmarshal(respondInBytes, &respond)
 	if err != nil {
 		return nil, err
@@ -44,8 +44,8 @@ func ParseResponse(respondInBytes []byte) (*rpcserver.JsonResponse, error) {
 	return &respond, nil
 }
 
-func CreateJsonRequest(jsonRPC, method string, params []interface{}, id interface{}) *rpcserver.JsonRequest{
-	request := new(rpcserver.JsonRequest)
+func CreateJsonRequest(jsonRPC, method string, params []interface{}, id interface{}) *rpchandler.JsonRequest{
+	request := new(rpchandler.JsonRequest)
 	request.Jsonrpc = jsonRPC
 	request.Method = method
 	request.Id = id
