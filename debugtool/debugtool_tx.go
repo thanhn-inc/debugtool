@@ -84,6 +84,8 @@ func CreateRawTransaction(privateKey string, addrList []string, amountList []uin
 			return nil, "", errors.New(fmt.Sprintf("cannot marshal txver1: %v", err))
 		}
 
+		fmt.Println("tx created", string(txBytes))
+
 		base58CheckData := base58.Base58Check{}.Encode(txBytes, common.ZeroByte)
 
 		return []byte(base58CheckData), tx.Hash().String(), nil
@@ -92,7 +94,7 @@ func CreateRawTransaction(privateKey string, addrList []string, amountList []uin
 	return nil, "", nil
 }
 
-func CreateRawTokenTransaction(privateKey string, addrList []string, amountList []uint64, version int8, tokenIDStr string, tokenType int) ([]byte, string, error) {
+func CreateRawTokenTransaction(privateKey string, addrList []string, amountList []uint64, version int8, tokenIDStr string, tokenType int, md metadata.Metadata) ([]byte, string, error) {
 	//Create sender private key from string
 	senderWallet, err := wallet.Base58CheckDeserialize(privateKey)
 	if err != nil {
@@ -178,7 +180,7 @@ func CreateRawTokenTransaction(privateKey string, addrList []string, amountList 
 			totalAmount, tokenType, tokenReceivers, coinsToSpendToken, false, 0, kvargsToken)
 
 		txTokenParam := tx_generic.NewTxTokenParams(&senderWallet.KeySet.PrivateKey, []*privacy.PaymentInfo{}, coinsToSpendPRV, prvFee,
-			tokenParam, nil, true, true, shardID, nil, kvargsPRV)
+			tokenParam, md, true, md == nil, shardID, nil, kvargsPRV)
 
 
 		tx := new(tx_ver1.TxToken)
@@ -222,7 +224,7 @@ func CreateAndSendRawTransaction(privateKey string, addrList []string, amountLis
 }
 
 func CreateAndSendRawTokenTransaction(privateKey string, addrList []string, amountList []uint64, version int8, tokenIDStr string, txTokenType int) (string, error) {
-	encodedTx, txHash, err := CreateRawTokenTransaction(privateKey, addrList, amountList, version, tokenIDStr, txTokenType)
+	encodedTx, txHash, err := CreateRawTokenTransaction(privateKey, addrList, amountList, version, tokenIDStr, txTokenType, nil)
 	if err != nil {
 		return "", err
 	}

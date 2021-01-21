@@ -47,13 +47,57 @@ func CreatePDEContributeTransaction(privateKey, pairID, tokenID string, amount u
 	}
 
 	addr := senderWallet.Base58CheckSerialize(wallet.PaymentAddressType)
-	pdeContributeMetadata, err := metadata.NewPDEContribution(pairID, addr, amount, tokenID, metadata.PDEContributionMeta)
+	md, err := metadata.NewPDEContribution(pairID, addr, amount, tokenID, metadata.PDEContributionMeta)
 
-	return CreateRawTransaction(privateKey, []string{common.BurningAddress2}, []uint64{amount}, 1, pdeContributeMetadata)
+	if tokenID == common.PRVIDStr {
+		return CreateRawTransaction(privateKey, []string{common.BurningAddress2}, []uint64{amount}, 1, md)
+	} else {
+		return CreateRawTokenTransaction(privateKey, []string{common.BurningAddress2}, []uint64{amount}, 1, tokenID, 1, md)
+	}
 }
 
 func CreateAndSendPDEContributeTransaction(privateKey, pairID, tokenID string, amount uint64) (string, error) {
 	encodedTx, txHash, err := CreatePDEContributeTransaction(privateKey, pairID, tokenID, amount)
+	if err != nil {
+		return "", err
+	}
+
+	var responseInBytes []byte
+	if tokenID == common.PRVIDStr {
+		responseInBytes, err = rpc.SendRawTx(string(encodedTx))
+		if err != nil {
+			return "", err
+		}
+	} else {
+		responseInBytes, err = rpc.SendRawTokenTx(string(encodedTx))
+		if err != nil {
+			return "", err
+		}
+	}
+
+
+	_, err = rpchandler.ParseResponse(responseInBytes)
+	if err != nil {
+		return "", err
+	}
+
+	return txHash, nil
+}
+
+func CreatePDEWithdrawalTransaction(privateKey, tokenID1, tokenID2 string, sharedAmount uint64) ([]byte, string, error) {
+	senderWallet, err := wallet.Base58CheckDeserialize(privateKey)
+	if err != nil {
+		return nil, "", err
+	}
+
+	addr := senderWallet.Base58CheckSerialize(wallet.PaymentAddressType)
+	pdeTradeMetadata, err := metadata.NewPDEWithdrawalRequest(addr, tokenID2, tokenID1, sharedAmount, metadata.PDEWithdrawalRequestMeta)
+
+	return CreateRawTransaction(privateKey, []string{}, []uint64{}, 1, pdeTradeMetadata)
+}
+
+func CreateAndSendPDEWithdrawalTransaction(privateKey, tokenID1, tokenID2 string, sharedAmount uint64) (string, error) {
+	encodedTx, txHash, err := CreatePDEWithdrawalTransaction(privateKey, tokenID1, tokenID2, sharedAmount)
 	if err != nil {
 		return "", err
 	}
