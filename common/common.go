@@ -8,7 +8,27 @@ import (
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	bn256 "github.com/ethereum/go-ethereum/crypto/bn256/cloudflare"
 	"math/big"
+	"reflect"
 )
+
+// SliceExists receives a slice and a item in interface type
+// checks whether the slice contain the item or not
+func SliceExists(slice interface{}, item interface{}) (bool, error) {
+	s := reflect.ValueOf(slice)
+
+	if s.Kind() != reflect.Slice {
+		return false, errors.New("SliceExists() given a non-slice type")
+	}
+
+	for i := 0; i < s.Len(); i++ {
+		interfacea := s.Index(i).Interface()
+		if interfacea == item {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
 
 // GetShardIDFromLastByte receives a last byte of public key and
 // returns a corresponding shardID
