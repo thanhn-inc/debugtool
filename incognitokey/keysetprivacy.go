@@ -1,9 +1,12 @@
 package incognitokey
 
 import (
+	"errors"
 	"github.com/thanhn-inc/debugtool/common"
 	"github.com/thanhn-inc/debugtool/common/base58"
 	"github.com/thanhn-inc/debugtool/privacy/key"
+	"github.com/thanhn-inc/debugtool/privacy/operation"
+	"github.com/thanhn-inc/debugtool/privacy/privacy_v1/schnorr"
 )
 
 // KeySet is real raw data of wallet account, which user can use to
@@ -57,23 +60,23 @@ func (keySet *KeySet) InitFromPrivateKey(privateKey *key.PrivateKey) error {
 	return nil
 }
 
-//// Sign receives data in bytes array and
-//// returns the signature of that data using Schnorr Signature Scheme with signing key is private key in ketSet
-//func (keySet KeySet) Sign(data []byte) ([]byte, error) {
-//	if len(data) == 0 {
-//		return []byte{}, NewCashecError(InvalidDataSignErr, errors.New("data is empty to sign"))
-//	}
-//
-//	hash := common.HashB(data)
-//	privateKeySig := new(schnorr.SchnorrPrivateKey)
-//	privateKeySig.Set(new(operation.Scalar).FromBytesS(keySet.PrivateKey), new(operation.Scalar).FromUint64(0))
-//
-//	signature, err := privateKeySig.Sign(hash)
-//	if err != nil {
-//		return []byte{}, NewCashecError(SignError, err)
-//	}
-//	return signature.Bytes(), nil
-//}
+// Sign receives data in bytes array and
+// returns the signature of that data using Schnorr Signature Scheme with signing key is private key in ketSet
+func (keySet KeySet) Sign(data []byte) ([]byte, error) {
+	if len(data) == 0 {
+		return []byte{}, NewCashecError(InvalidDataSignErr, errors.New("data is empty to sign"))
+	}
+
+	hash := common.HashB(data)
+	privateKeySig := new(schnorr.SchnorrPrivateKey)
+	privateKeySig.Set(new(operation.Scalar).FromBytesS(keySet.PrivateKey), new(operation.Scalar).FromUint64(0))
+
+	signature, err := privateKeySig.Sign(hash)
+	if err != nil {
+		return []byte{}, NewCashecError(SignError, err)
+	}
+	return signature.Bytes(), nil
+}
 
 //// Verify receives data and signature
 //// It checks whether the given signature is the signature of data
