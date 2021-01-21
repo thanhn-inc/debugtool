@@ -108,6 +108,18 @@ func GetBalance(privkey, tokenID string) {
 	fmt.Println("========== END GET BALANCE ==========")
 }
 
+//PDEX
+func GetPDEState(beaconHeight int64) {
+	fmt.Println("========== GET PDE STATE ==========")
+	b, err := rpc.GetPDEState(beaconHeight)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(string(b))
+	fmt.Println("========== END GET PDE STATE ==========")
+}
+
 //Token
 func ListTokens() {
 	fmt.Println("========== LIST ALL TOKEN ==========")
@@ -588,7 +600,7 @@ func main() {
 
 			fmt.Printf("CreateAndSendPDETradeTransaction succeeded. TxHash: %v.\n", txHash)
 		}
-		if args[0] == "pdecontributeprv" {
+		if args[0] == "pdecontribute" {
 			if len(args) < 3 {
 				fmt.Println("Not enough param for pdetradeprv")
 				continue
@@ -617,15 +629,75 @@ func main() {
 				}
 			}
 
-
 			txHash, err := debugtool.CreateAndSendPDEContributeTransaction(privateKey, "newpair", tokenID, uint64(amount))
 			if err != nil {
 				fmt.Println(err)
 				continue
 			}
 
-			fmt.Printf("CreateAndSendPDETradeTransaction succeeded. TxHash: %v.\n", txHash)
+			fmt.Printf("CreateAndSendPDEContributeTransaction for token %v succeeded. TxHash: %v.\n", tokenID, txHash)
 		}
+		if args[0] == "pdewithdraw" {
+			if len(args) < 5 {
+				fmt.Println("Not enough param for pdetradeprv")
+				continue
+			}
+
+			privateKey := args[1]
+			if len(args[1]) < 3 {
+				index, err := strconv.ParseInt(args[1], 10, 32)
+				if err != nil {
+					panic(err)
+				}
+				privateKey = privateKeys[index]
+			}
+
+			tokenID1 := args[2]
+			if len(tokenID1) < 10 {
+				tmpTokenID, ok := tokenIDs[tokenID1]
+				if !ok {
+					fmt.Println("tokenID not found")
+				}
+				tokenID1 = tmpTokenID
+			}
+
+			tokenID2 := args[3]
+			if len(tokenID2) < 10 {
+				tmpTokenID, ok := tokenIDs[tokenID2]
+				if !ok {
+					fmt.Println("tokenID not found")
+				}
+				tokenID2 = tmpTokenID
+			}
+
+			sharedAmount, err := strconv.ParseInt(args[4], 10, 32)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			txHash, err := debugtool.CreateAndSendPDEWithdrawalTransaction(privateKey, tokenID1, tokenID2, uint64(sharedAmount))
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			fmt.Printf("CreateAndSendPDEWithdrawalTransaction succeeded. TxHash: %v.\n", txHash)
+		}
+		if args[0] == "pdestate" {
+			if len(args) < 2 {
+				fmt.Println("need at least 2 arguments")
+				continue
+			}
+			bHeight, err := strconv.ParseInt(args[1], 10, 32)
+			if err != nil {
+				fmt.Println("cannot get beacon height")
+				continue
+			}
+
+			GetPDEState(bHeight)
+		}
+
 
 		//General
 		if args[0] == "shard" {
