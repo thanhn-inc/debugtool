@@ -20,7 +20,6 @@ func CreatePDETradeTransaction(privateKey, tokenIDToSell, tokenIDToBuy string, a
 
 	return CreateRawTransaction(privateKey, []string{common.BurningAddress2}, []uint64{amount}, 1, pdeTradeMetadata)
 }
-
 func CreateAndSendPDETradeTransaction(privateKey, tokenIDToSell, tokenIDToBuy string, amount uint64) (string, error) {
 	encodedTx, txHash, err := CreatePDETradeTransaction(privateKey, tokenIDToSell, tokenIDToBuy, amount)
 	if err != nil {
@@ -55,7 +54,6 @@ func CreatePDEContributeTransaction(privateKey, pairID, tokenID string, amount u
 		return CreateRawTokenTransaction(privateKey, []string{common.BurningAddress2}, []uint64{amount}, 1, tokenID, 1, md)
 	}
 }
-
 func CreateAndSendPDEContributeTransaction(privateKey, pairID, tokenID string, amount uint64) (string, error) {
 	encodedTx, txHash, err := CreatePDEContributeTransaction(privateKey, pairID, tokenID, amount)
 	if err != nil {
@@ -95,7 +93,6 @@ func CreatePDEWithdrawalTransaction(privateKey, tokenID1, tokenID2 string, share
 
 	return CreateRawTransaction(privateKey, []string{}, []uint64{}, 1, pdeTradeMetadata)
 }
-
 func CreateAndSendPDEWithdrawalTransaction(privateKey, tokenID1, tokenID2 string, sharedAmount uint64) (string, error) {
 	encodedTx, txHash, err := CreatePDEWithdrawalTransaction(privateKey, tokenID1, tokenID2, sharedAmount)
 	if err != nil {
