@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
+	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	bn256 "github.com/ethereum/go-ethereum/crypto/bn256/cloudflare"
 	"math/big"
 )
@@ -209,4 +210,14 @@ func B2I(bytes []byte) *big.Int {
 		res.SetBytes(bytes)
 	}
 	return res
+}
+
+// B2ImN is Bytes to Int mod N, with N is secp256k1 curve order
+func B2ImN(bytes []byte) *big.Int {
+	x := big.NewInt(0)
+	x.SetBytes(ethcrypto.Keccak256Hash(bytes).Bytes())
+	for x.Cmp(ethcrypto.S256().Params().N) != -1 {
+		x.SetBytes(ethcrypto.Keccak256Hash(x.Bytes()).Bytes())
+	}
+	return x
 }
