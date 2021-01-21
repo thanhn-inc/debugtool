@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
+	bn256 "github.com/ethereum/go-ethereum/crypto/bn256/cloudflare"
 	"math/big"
 )
 
@@ -198,3 +199,14 @@ func FromHex(s string) []byte {
 // HexToHash sets byte representation of s to hash.
 // If b is larger than len(h), b will be cropped from the left.
 func HexToHash(s string) Hash { return BytesToHash(FromHex(s)) }
+
+// B2I convert byte array to big int which belong to Fp
+func B2I(bytes []byte) *big.Int {
+	res := big.NewInt(0)
+	res.SetBytes(bytes)
+	for res.Cmp(bn256.Order) != -1 {
+		bytes = Hash4Bls(bytes)
+		res.SetBytes(bytes)
+	}
+	return res
+}

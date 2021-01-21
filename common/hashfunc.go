@@ -24,3 +24,11 @@ func HashB(b []byte) []byte {
 func HashH(b []byte) Hash {
 	return Hash(sha3.Sum256(b))
 }
+
+// Hash4Bls is Hash function for calculate block hash
+// this is different from hash function for calculate transaction hash
+func Hash4Bls(data []byte) []byte {
+	hashMachine := sha3.NewLegacyKeccak256()
+	hashMachine.Write(data)
+	return hashMachine.Sum(nil)
+}
