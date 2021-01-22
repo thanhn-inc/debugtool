@@ -453,6 +453,14 @@ func main() {
 				}
 
 				fmt.Printf("CreateAndSendRawConversionTransaction succeeded. TxHash: %v.\n", txHash)
+			} else {
+				txHash, err := debugtool.CreateAndSendRawTokenConversionTransaction(privateKey, tokenID)
+				if err != nil {
+					fmt.Println("CreateAndSendRawTransaction returns an error:", err)
+					continue
+				}
+
+				fmt.Printf("CreateAndSendRawTokenConversionTransaction succeeded. TxHash: %v.\n", txHash)
 			}
 
 
