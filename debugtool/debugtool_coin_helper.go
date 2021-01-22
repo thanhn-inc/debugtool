@@ -44,18 +44,20 @@ func ParseCoinFromJsonResponse(b []byte) ([]jsonresult.ICoinInfo, []*big.Int, er
 
 	resultOutCoins := make([]jsonresult.ICoinInfo, 0)
 	listOutputCoins := tmp.Outputs
+	listIndices := make([]*big.Int, 0)
 	for _, value := range listOutputCoins {
 		for _, outCoin := range value {
-			out, _, err := jsonresult.NewCoinFromJsonOutCoin(outCoin)
+			out, idx, err := jsonresult.NewCoinFromJsonOutCoin(outCoin)
 			if err != nil {
 				return nil, nil, err
 			}
 
 			resultOutCoins = append(resultOutCoins, out)
+			listIndices = append(listIndices, idx)
 		}
 	}
 
-	return resultOutCoins, nil, nil
+	return resultOutCoins, listIndices, nil
 }
 
 func GetListDecryptedCoins(privateKey string, listOutputCoins []jsonresult.ICoinInfo) ([]coin.PlainCoin, []string, error) {

@@ -62,12 +62,10 @@ func GetUnspentOutputCoins(privateKey, tokenID string, height uint64) ([]coin.Pl
 	}
 	outCoinKey.SetReadonlyKey("") // call this if you do not want the remote full node to decrypt your coin
 
-	listOutputCoins, _, err := GetOutputCoins(outCoinKey, tokenID, height)
+	listOutputCoins, listIndices, err := GetOutputCoins(outCoinKey, tokenID, height)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	//fmt.Printf("Number of output coins: %v\n", len(listOutputCoins))
 
 	if len(listOutputCoins) == 0 {
 		return nil, nil, nil
@@ -85,13 +83,15 @@ func GetUnspentOutputCoins(privateKey, tokenID string, height uint64) ([]coin.Pl
 	}
 
 	listUnspentOutputCoins := make([]coin.PlainCoin, 0)
+	listUnspentIndices := make([]*big.Int, 0)
 	for i, decryptedCoin := range listDecryptedOutCoins {
 		if !checkSpentList[i] {
 			listUnspentOutputCoins = append(listUnspentOutputCoins, decryptedCoin)
+			listUnspentIndices = append(listUnspentIndices, listIndices[i])
 		}
 	}
 
-	return listUnspentOutputCoins, nil, nil
+	return listUnspentOutputCoins, listUnspentIndices, nil
 }
 
 //GetBalance retrieves balance of a private key without sending this private key to the remote full node.
