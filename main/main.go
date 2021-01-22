@@ -313,12 +313,15 @@ func main() {
 			fmt.Println("Balance =", balance)
 		}
 		if args[0] == "transfer" {
+			if len(args) < 4 {
+				fmt.Println("need at least 4 arguments.")
+			}
 			var privateKey string
 			if len(args[1]) < 3 {
 				index, err := strconv.ParseInt(args[1], 10, 32)
 				if err != nil {
 					fmt.Println(err)
-					panic(err)
+					continue
 				}
 				if index >= int64(len(privateKeys)) {
 					fmt.Println("Cannot find the private key")
@@ -349,7 +352,22 @@ func main() {
 				continue
 			}
 
-			txHash, err := debugtool.CreateAndSendRawTransaction(privateKey, []string{paymentAddress}, []uint64{amount}, 2, nil)
+			//Default version is 2
+			txVersion := int8(2)
+			if len(args) > 4 {
+				tmpVersion, err := strconv.ParseUint(args[4], 10, 32)
+				if err != nil {
+					fmt.Println("cannot parse version", err)
+					continue
+				}
+				if tmpVersion > 2 {
+					fmt.Println("version invalid", tmpVersion)
+					continue
+				}
+				txVersion = int8(tmpVersion)
+			}
+
+			txHash, err := debugtool.CreateAndSendRawTransaction(privateKey, []string{paymentAddress}, []uint64{amount}, txVersion, nil)
 			if err != nil {
 				fmt.Println("CreateAndSendRawTransaction returns an error:", err)
 				continue
@@ -390,6 +408,54 @@ func main() {
 			}
 
 			GetUnspentOutputToken(privateKey, tokenID, bi.Uint64())
+		}
+
+		//CONVERT RPC
+		if args[0] == "convert" {//works for both PRV and tokens
+			if len(args) < 2 {
+				fmt.Println("need at least 2 arguments.")
+			}
+			var privateKey string
+			if len(args[1]) < 3 {
+				index, err := strconv.ParseInt(args[1], 10, 32)
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
+				if index >= int64(len(privateKeys)) {
+					fmt.Println("Cannot find the private key")
+					continue
+				}
+				privateKey = privateKeys[index]
+			} else {
+				privateKey = args[1]
+			}
+
+			var tokenID = common.PRVIDStr
+			var ok bool
+			if len(args) > 2 {
+				tokenID = args[2]
+				if len(tokenID) < 10 {
+					tokenID, ok = tokenIDs[tokenID]
+					if !ok {
+						fmt.Println("cannot find tokenID")
+						fmt.Println("list of tokenIDs", tokenIDs)
+						continue
+					}
+				}
+			}
+
+			if tokenID == common.PRVIDStr {
+				txHash, err := debugtool.CreateAndSendRawConversionTransaction(privateKey)
+				if err != nil {
+					fmt.Println("CreateAndSendRawTransaction returns an error:", err)
+					continue
+				}
+
+				fmt.Printf("CreateAndSendRawConversionTransaction succeeded. TxHash: %v.\n", txHash)
+			}
+
+
 		}
 
 		//TOKEN RPCs

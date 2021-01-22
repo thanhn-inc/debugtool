@@ -62,6 +62,8 @@ func CreateRawTransaction(privateKey string, addrList []string, amountList []uin
 			return nil, "", err
 		}
 
+		fmt.Println("Input coin", coinsToSpend, len(coinsToSpend))
+
 		var kvargs map[string]interface{}
 		if hasPrivacy {
 			fmt.Printf("Getting random commitments.\n")
@@ -79,11 +81,6 @@ func CreateRawTransaction(privateKey string, addrList []string, amountList []uin
 		err = tx.Init(txParam)
 		if err != nil {
 			return nil, "", errors.New(fmt.Sprintf("init txver1 error: %v", err))
-		}
-
-		for _, inputCoin := range tx.GetProof().GetInputCoins() {
-			fmt.Println("inputcoin:", inputCoin.GetCommitment().ToBytesS(), inputCoin.GetPublicKey().ToBytesS(),
-				inputCoin.GetValue(), inputCoin.GetSNDerivator().ToBytesS(), inputCoin.GetRandomness().ToBytesS())
 		}
 
 		txBytes, err := json.Marshal(tx)
@@ -128,12 +125,12 @@ func CreateRawTransaction(privateKey string, addrList []string, amountList []uin
 		tx := new(tx_ver2.Tx)
 		err = tx.Init(txParam)
 		if err != nil {
-			return nil, "", errors.New(fmt.Sprintf("init txver1 error: %v", err))
+			return nil, "", errors.New(fmt.Sprintf("init txver2 error: %v", err))
 		}
 
 		txBytes, err := json.Marshal(tx)
 		if err != nil {
-			return nil, "", errors.New(fmt.Sprintf("cannot marshal txver1: %v", err))
+			return nil, "", errors.New(fmt.Sprintf("cannot marshal txver2: %v", err))
 		}
 
 		fmt.Println("tx created", string(txBytes))
@@ -250,6 +247,63 @@ func CreateRawTokenTransaction(privateKey string, addrList []string, amountList 
 	return nil, "", nil
 }
 
+func CreateRawConversionTransaction(privateKey string) ([]byte, string, error) {
+	//Create sender private key from string
+	senderWallet, err := wallet.Base58CheckDeserialize(privateKey)
+	if err != nil {
+		return nil, "", errors.New(fmt.Sprintf("cannot init private key %v: %v", privateKey, err))
+	}
+
+	fmt.Println("Getting UTXOs")
+	//Get list of UTXOs
+	utxoList, _, err := GetUnspentOutputCoins(privateKey, common.PRVIDStr, 0)
+	if err != nil {
+		return nil, "", err
+	}
+
+	fmt.Printf("Finish getting UTXOs. Length of UTXOs: %v\n", len(utxoList))
+
+	//Calculating the total amount being converted.
+	totalAmount := uint64(0)
+	for _, utxo := range utxoList {
+		totalAmount += utxo.GetValue()
+	}
+
+	if totalAmount < DefaultPRVFee {
+		fmt.Printf("Total amount (%v) is less than txFee (%v).\n", totalAmount, DefaultPRVFee)
+	}
+
+	totalAmount -= DefaultPRVFee
+
+	uniquePayment := privacy.PaymentInfo{PaymentAddress: senderWallet.KeySet.PaymentAddress, Amount: totalAmount, Message: []byte{}}
+
+	//Create tx conversion params
+	txParam := tx_ver2.NewTxConvertVer1ToVer2InitParams(&(senderWallet.KeySet.PrivateKey), []*privacy.PaymentInfo{&uniquePayment}, utxoList,
+		DefaultPRVFee, nil, nil, nil, nil)
+
+	tx := new(tx_ver2.Tx)
+	err = tx_ver2.InitConversion(tx, txParam)
+	if err != nil {
+		return nil, "", errors.New(fmt.Sprintf("init txconvert error: %v", err))
+	}
+
+	for _, inputCoin := range tx.GetProof().GetInputCoins() {
+		fmt.Println("inputcoin:", inputCoin.GetCommitment().ToBytesS(), inputCoin.GetPublicKey().ToBytesS(),
+			inputCoin.GetValue(), inputCoin.GetSNDerivator().ToBytesS(), inputCoin.GetRandomness().ToBytesS())
+	}
+
+	txBytes, err := json.Marshal(tx)
+	if err != nil {
+		return nil, "", errors.New(fmt.Sprintf("cannot marshal txconvert: %v", err))
+	}
+
+	fmt.Println("tx created", string(txBytes))
+
+	base58CheckData := base58.Base58Check{}.Encode(txBytes, common.ZeroByte)
+
+	return []byte(base58CheckData), tx.Hash().String(), nil
+}
+
 func CreateAndSendRawTransaction(privateKey string, addrList []string, amountList []uint64, version int8, md metadata.Metadata) (string, error) {
 	encodedTx, txHash, err := CreateRawTransaction(privateKey, addrList, amountList, version, md)
 	if err != nil {
@@ -292,6 +346,24 @@ func CreateAndSendRawTokenTransaction(privateKey string, addrList []string, amou
 	return txHash, nil
 }
 
-//func CheckTransactionStatus(txHash string) ([]bool, error) {
-//
-//}
+func CreateAndSendRawConversionTransaction(privateKey string) (string, error) {
+	encodedTx, txHash, err := CreateRawConversionTransaction(privateKey)
+	if err != nil {
+		return "", err
+	}
+
+	responseInBytes, err := rpc.SendRawTx(string(encodedTx))
+	if err != nil {
+		return "", nil
+	}
+
+	fmt.Println("SendRawTx:", string(responseInBytes))
+
+	_, err = rpchandler.ParseResponse(responseInBytes)
+	if err != nil {
+		return "", err
+	}
+
+	return txHash, nil
+}
+
