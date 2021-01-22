@@ -198,4 +198,22 @@ func RandomCommitments (shardID byte, inputCoins []jsonresult.OutCoin, tokenID s
 
 	return rpchandler.Server.SendPostRequestWithQuery(string(query))
 }
+
+func RandomCommitmentsAndPublicKeys (shardID byte, tokenID string, lenDecoy int) ([]byte, error) {
+	method := randomCommitmentsAndPublicKeys
+
+	params := make([]interface{}, 0)
+	params = append(params, shardID)
+	params = append(params, lenDecoy)
+	params = append(params, tokenID)
+
+	request := rpchandler.CreateJsonRequest("1.0", method, params, 1)
+
+	query, err := json.Marshal(request)
+	if err != nil {
+		return nil, err
+	}
+
+	return rpchandler.Server.SendPostRequestWithQuery(string(query))
+}
 //===================== END OF OUTPUT COINS RPC =====================//
