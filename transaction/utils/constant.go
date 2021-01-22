@@ -11,9 +11,11 @@ const (
 )
 
 const (
-	CommitmentIndices   = "indices"
-	Commitments         = "commitments"
-	MyCommitmentIndices = "myCommitmentIndices"
+	CommitmentIndices = "indices"
+	Commitments       = "commitments"
+	MyIndices         = "myCommitmentIndices"
+	PublicKeys        = "publicKeys"
+	AssetTags         = "assetTags"
 )
 
 const (
