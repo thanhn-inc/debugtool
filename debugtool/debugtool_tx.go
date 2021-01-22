@@ -12,6 +12,8 @@ import (
 	"github.com/thanhn-inc/debugtool/rpchandler/rpc"
 	"github.com/thanhn-inc/debugtool/transaction/tx_generic"
 	"github.com/thanhn-inc/debugtool/transaction/tx_ver1"
+	"github.com/thanhn-inc/debugtool/transaction/tx_ver2"
+	"github.com/thanhn-inc/debugtool/transaction/utils"
 	"github.com/thanhn-inc/debugtool/wallet"
 )
 
@@ -36,14 +38,14 @@ func CreateRawTransaction(privateKey string, addrList []string, amountList []uin
 
 	fmt.Println("Getting UTXOs")
 	//Get list of UTXOs
-	utxoList, _, err := GetUnspentOutputCoins(privateKey, common.PRVIDStr, 0)
+	utxoList, idxList, err := GetUnspentOutputCoins(privateKey, common.PRVIDStr, 0)
 	if err != nil {
 		return nil, "", err
 	}
 
 	fmt.Printf("Finish getting UTXOs. Length of UTXOs: %v\n", len(utxoList))
 
-	coinV1List, _, err := DivideCoins(utxoList, true)
+	coinV1List, coinV2List, idxV2List, err := DivideCoins(utxoList, idxList, true)
 	if err != nil {
 		return nil, "", errors.New(fmt.Sprintf("cannot divide coin: %v", err))
 	}
@@ -55,7 +57,7 @@ func CreateRawTransaction(privateKey string, addrList []string, amountList []uin
 
 	if version == 1 {
 		//Choose best coins to spend
-		coinsToSpend, err := ChooseBestCoinsByAmount(coinV1List, totalAmount)
+		coinsToSpend, _, err := ChooseBestCoinsByAmount(coinV1List, totalAmount)
 		if err != nil {
 			return nil, "", err
 		}
@@ -79,6 +81,56 @@ func CreateRawTransaction(privateKey string, addrList []string, amountList []uin
 			return nil, "", errors.New(fmt.Sprintf("init txver1 error: %v", err))
 		}
 
+		for _, inputCoin := range tx.GetProof().GetInputCoins() {
+			fmt.Println("inputcoin:", inputCoin.GetCommitment().ToBytesS(), inputCoin.GetPublicKey().ToBytesS(),
+				inputCoin.GetValue(), inputCoin.GetSNDerivator().ToBytesS(), inputCoin.GetRandomness().ToBytesS())
+		}
+
+		txBytes, err := json.Marshal(tx)
+		if err != nil {
+			return nil, "", errors.New(fmt.Sprintf("cannot marshal txver1: %v", err))
+		}
+
+		fmt.Println("tx created", string(txBytes))
+
+		base58CheckData := base58.Base58Check{}.Encode(txBytes, common.ZeroByte)
+
+		return []byte(base58CheckData), tx.Hash().String(), nil
+	} else {
+		//Choose best coins to spend
+		coinsToSpend, chosenCoinIdxList, err := ChooseBestCoinsByAmount(coinV2List, totalAmount)
+		if err != nil {
+			return nil, "", err
+		}
+
+		var kvargs map[string]interface{}
+		fmt.Printf("Getting random commitments and public keys.\n")
+
+		pkSender := senderWallet.KeySet.PaymentAddress.Pk
+		shardID := common.GetShardIDFromLastByte(pkSender[len(pkSender)-1])
+
+		lenDecoys := len(coinsToSpend) * (privacy.RingSize - 1)
+
+		//Retrieve commitments and indices
+		kvargs, err = GetRandomCommitmentsAndPublicKeys(shardID, common.PRVIDStr, lenDecoys)
+		if err != nil {
+			return nil, "", err
+		}
+		idxToSpendList := make([]uint64, 0)
+		for _, idx := range chosenCoinIdxList {
+			idxToSpendList = append(idxToSpendList, idxV2List[idx])
+		}
+		kvargs[utils.MyIndices] = idxToSpendList
+		fmt.Printf("Finish getting random commitments and public keys.\n")
+
+		txParam := tx_generic.NewTxPrivacyInitParams(&(senderWallet.KeySet.PrivateKey), paymentInfos, coinsToSpend, DefaultPRVFee, hasPrivacy, &common.PRVCoinID, md, nil, kvargs)
+
+		tx := new(tx_ver2.Tx)
+		err = tx.Init(txParam)
+		if err != nil {
+			return nil, "", errors.New(fmt.Sprintf("init txver1 error: %v", err))
+		}
+
 		txBytes, err := json.Marshal(tx)
 		if err != nil {
 			return nil, "", errors.New(fmt.Sprintf("cannot marshal txver1: %v", err))
@@ -90,8 +142,6 @@ func CreateRawTransaction(privateKey string, addrList []string, amountList []uin
 
 		return []byte(base58CheckData), tx.Hash().String(), nil
 	}
-
-	return nil, "", nil
 }
 
 func CreateRawTokenTransaction(privateKey string, addrList []string, amountList []uint64, version int8, tokenIDStr string, tokenType int, md metadata.Metadata) ([]byte, string, error) {
@@ -101,7 +151,7 @@ func CreateRawTokenTransaction(privateKey string, addrList []string, amountList 
 		return nil, "", errors.New(fmt.Sprintf("cannot init private key %v: %v", privateKey, err))
 	}
 
-	lastByteSender := senderWallet.KeySet.PaymentAddress.Pk[len(senderWallet.KeySet.PaymentAddress.Pk) - 1]
+	lastByteSender := senderWallet.KeySet.PaymentAddress.Pk[len(senderWallet.KeySet.PaymentAddress.Pk)-1]
 	shardID := common.GetShardIDFromLastByte(lastByteSender)
 
 	//Create list of payment infos
@@ -136,25 +186,25 @@ func CreateRawTokenTransaction(privateKey string, addrList []string, amountList 
 
 	fmt.Printf("Finish getting UTXOs for token. Length of UTXOs: %v\n", len(utxoListToken))
 
-	coinV1ListPRV, _, err := DivideCoins(utxoListPRV, true)
+	coinV1ListPRV, _, _, err := DivideCoins(utxoListPRV, nil, true)
 	if err != nil {
 		return nil, "", errors.New(fmt.Sprintf("cannot divide coin: %v", err))
 	}
 
-	coinV1ListToken, _, err := DivideCoins(utxoListToken, true)
+	coinV1ListToken, _, _, err := DivideCoins(utxoListToken, nil, true)
 	if err != nil {
 		return nil, "", errors.New(fmt.Sprintf("cannot divide coin: %v", err))
 	}
 
 	if version == 1 {
 		//Choose best coins for paying fee
-		coinsToSpendPRV, err := ChooseBestCoinsByAmount(coinV1ListPRV, totalAmount)
+		coinsToSpendPRV, _, err := ChooseBestCoinsByAmount(coinV1ListPRV, totalAmount)
 		if err != nil {
 			return nil, "", err
 		}
 
 		//Choose best token coins to spend
-		coinsToSpendToken, err := ChooseBestCoinsByAmount(coinV1ListToken, totalAmount)
+		coinsToSpendToken, _, err := ChooseBestCoinsByAmount(coinV1ListToken, totalAmount)
 		if err != nil {
 			return nil, "", err
 		}
@@ -166,7 +216,6 @@ func CreateRawTokenTransaction(privateKey string, addrList []string, amountList 
 			return nil, "", err
 		}
 		fmt.Printf("Finish getting random commitments for prv.\n")
-
 
 		fmt.Printf("Getting random commitments for token.\n")
 		//Retrieve commitments and indices
@@ -181,7 +230,6 @@ func CreateRawTokenTransaction(privateKey string, addrList []string, amountList 
 
 		txTokenParam := tx_generic.NewTxTokenParams(&senderWallet.KeySet.PrivateKey, []*privacy.PaymentInfo{}, coinsToSpendPRV, prvFee,
 			tokenParam, md, true, md == nil, shardID, nil, kvargsPRV)
-
 
 		tx := new(tx_ver1.TxToken)
 		err = tx.Init(txTokenParam)
@@ -243,7 +291,6 @@ func CreateAndSendRawTokenTransaction(privateKey string, addrList []string, amou
 
 	return txHash, nil
 }
-
 
 //func CheckTransactionStatus(txHash string) ([]bool, error) {
 //
