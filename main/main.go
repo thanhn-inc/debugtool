@@ -196,6 +196,7 @@ func main() {
 		"112t8rnYoioTRNsM8gnUYt54ThWWrRnG4e1nRX147MWGbEazYP7RWrEUB58JLnBjKhh49FMS5o5ttypZucfw5dFYMAsgDUsHPa9BAasY8U1i",
 		"112t8rnXtw6pWwowv88Ry4XxukFNLfbbY2PLh2ph38ixbCbZKwf9ZxVjd4s7jU3RSdKctC7gGZp9piy8nZoLqHwqDBWcsMHWsQg27S5WCdm4",
 	}
+	privateSeeds := make(map[string]string)
 
 	tokenIDs := make(map[string]string)
 	tokenIDs["USDT"] = "716fd1009e2a1669caacc36891e707bfdf02590f96ebd897548e8963c95ebac0"
@@ -207,6 +208,7 @@ func main() {
 	tokenIDs["PRV"] = common.PRVIDStr
 
 	rpchandler.Server = new(rpchandler.RPCServer).InitLocal("9334")
+	//rpchandler.Server = new(rpchandler.RPCServer).InitDevNet()
 	//rpchandler.Server = new(rpchandler.RPCServer).InitTestnet()
 
 	//tool := new(rpchandler.RPCServer).InitLocal("9334")
@@ -214,7 +216,22 @@ func main() {
 	//tool := new(rpchandler.RPCServer).InitDevNet()
 	//tool := new(rpchandler.RPCServer).InitTestnet()
 
+	activeShards, err := debugtool.GetActiveShard()
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("Init to: %v, number of active shards: %v\n", rpchandler.Server.GetURL(), activeShards)
+	common.MaxShardNumber = activeShards
+
 	reader := bufio.NewReader(os.Stdin)
+
+	//Generate privateSeeds
+	for _, privateKey := range privateKeys {
+		privateSeedBytes := privacy.HashToScalar([]byte(privateKey)).ToBytesS()
+		privateSeed := base58.Base58Check{}.Encode(privateSeedBytes, common.ZeroByte)
+		privateSeeds[privateKey] = privateSeed
+	}
 
 	for {
 		fmt.Print("Enter your choice (arguments separated by ONLY ONE space) and hit ENTER: ")
@@ -312,7 +329,7 @@ func main() {
 				privateKey = args[1]
 			}
 
-			var paymentAddress string
+			var paymentAddress = args[2]
 			if len(args[2]) < 4 {
 				index, err := strconv.ParseInt(args[2], 10, 32)
 				if err != nil {
@@ -324,17 +341,15 @@ func main() {
 					continue
 				}
 				paymentAddress = privateKeyToPaymentAddress(privateKeys[index], -1)
-			} else {
-				paymentAddress = args[2]
 			}
 
-			amount, err := strconv.ParseInt(args[3], 10, 32)
+			amount, err := strconv.ParseUint(args[3], 10, 64)
 			if err != nil {
-				fmt.Println("cannot parse amount", args[3])
+				fmt.Println("cannot parse amount", args[3], len(args[3]))
 				continue
 			}
 
-			txHash, err := debugtool.CreateAndSendRawTransaction(privateKey, []string{paymentAddress}, []uint64{uint64(amount)}, 1, nil)
+			txHash, err := debugtool.CreateAndSendRawTransaction(privateKey, []string{paymentAddress}, []uint64{amount}, 2, nil)
 			if err != nil {
 				fmt.Println("CreateAndSendRawTransaction returns an error:", err)
 				continue
@@ -376,7 +391,6 @@ func main() {
 
 			GetUnspentOutputToken(privateKey, tokenID, bi.Uint64())
 		}
-
 
 		//TOKEN RPCs
 		if args[0] == "inittoken" {
@@ -509,7 +523,7 @@ func main() {
 			ListTokens()
 		}
 
-		//Keys
+		//KEY
 		if args[0] == "payment" {
 			var err error
 			if len (args) < 2{
@@ -548,7 +562,7 @@ func main() {
 			fmt.Println(privateKey, payment)
 		}
 
-		//Blockchain
+		//BLOCKCHAIN
 		if args[0] == "info" {
 			GetBlockchainInfo()
 		}
@@ -602,7 +616,7 @@ func main() {
 		}
 		if args[0] == "pdecontribute" {
 			if len(args) < 3 {
-				fmt.Println("Not enough param for pdetradeprv")
+				fmt.Println("Not enough param for pdecontribute")
 				continue
 			}
 
@@ -639,7 +653,7 @@ func main() {
 		}
 		if args[0] == "pdewithdraw" {
 			if len(args) < 5 {
-				fmt.Println("Not enough param for pdetradeprv")
+				fmt.Println("Not enough param for pdewithdraw")
 				continue
 			}
 
@@ -698,8 +712,118 @@ func main() {
 			GetPDEState(bHeight)
 		}
 
+		//STAKING
+		if args[0] == "staking" {
+			if len(args) < 2 {
+				fmt.Println("Not enough param for staking")
+				continue
+			}
+			privateKey := args[1]
+			if len(args[1]) < 3 {
+				index, err := strconv.ParseInt(args[1], 10, 32)
+				if err != nil {
+					panic(err)
+				}
+				privateKey = privateKeys[index]
+			}
 
-		//General
+			autoStaking := true
+			var err error
+			if len(args) > 2 {
+				autoStaking, err = strconv.ParseBool(args[2])
+				if err != nil {
+					autoStaking = false
+				}
+			}
+
+			var privateSeed string
+			privateSeed, ok := privateSeeds[privateKey]
+			if !ok {
+				privateSeedBytes := privacy.HashToScalar([]byte(privateKey)).ToBytesS()
+				privateSeed := base58.Base58Check{}.Encode(privateSeedBytes, common.ZeroByte)
+				privateSeeds[privateKey] = privateSeed
+			}
+
+			txHash, err := debugtool.CreateAndSendStakingTransaction(privateKey, privateSeed, "", "", autoStaking)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			fmt.Printf("CreateAndSendStakingTransaction succeeded. TxHash: %v.\n", txHash)
+		}
+		if args[0] == "unstaking" {
+			if len(args) < 2 {
+				fmt.Println("Not enough param for staking")
+				continue
+			}
+			privateKey := args[1]
+			if len(args[1]) < 3 {
+				index, err := strconv.ParseInt(args[1], 10, 32)
+				if err != nil {
+					panic(err)
+				}
+				privateKey = privateKeys[index]
+			}
+
+			var privateSeed string
+			privateSeed, ok := privateSeeds[privateKey]
+			if !ok {
+				privateSeedBytes := privacy.HashToScalar([]byte(privateKey)).ToBytesS()
+				privateSeed := base58.Base58Check{}.Encode(privateSeedBytes, common.ZeroByte)
+				privateSeeds[privateKey] = privateSeed
+			}
+
+			candidateAddr := ""
+			if len(args) > 2 {
+				candidateAddr = args[2]
+			}
+
+			txHash, err := debugtool.CreateAndSendUnStakingTransaction(privateKey, privateSeed, candidateAddr)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			fmt.Printf("CreateAndSendUnStakingTransaction succeeded. TxHash: %v.\n", txHash)
+		}
+		if args[0] == "reward" {
+			if len(args) < 2 {
+				fmt.Println("Not enough param for staking")
+				continue
+			}
+			privateKey := args[1]
+			if len(args[1]) < 3 {
+				index, err := strconv.ParseInt(args[1], 10, 32)
+				if err != nil {
+					panic(err)
+				}
+				privateKey = privateKeys[index]
+			}
+
+			candidateAddr := ""
+			if len(args) > 2 {
+				candidateAddr = args[2]
+			}
+
+			txHash, err := debugtool.CreateAndSendWithDrawRewardTransaction(privateKey, candidateAddr)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			fmt.Printf("CreateAndSendWithDrawRewardTransaction succeeded. TxHash: %v.\n", txHash)
+		}
+		if args[0] == "listreward" {
+			b, err := rpc.GetListRewardAmount()
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			fmt.Println(string(b))
+		}
+
+		//GENERAL
 		if args[0] == "shard" {
 			activeShards, err := debugtool.GetActiveShard()
 			if err != nil {
@@ -710,7 +834,6 @@ func main() {
 			fmt.Println("Number of active shards:", activeShards)
 			common.MaxShardNumber = activeShards
 		}
-
 		if args[0] == "dec58" {
 			b, _, err := base58.Base58Check{}.Decode(args[1])
 			if err != nil {
