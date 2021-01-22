@@ -212,9 +212,9 @@ func (tx *Tx) signOnMessage(inp []privacy.PlainCoin, out []*privacy.CoinV2, para
 		return piErr
 	}
 	var pi = int(piBig.Int64())
-	ring, indexes, commitmentToZero, err := generateMlsagRingWithIndexes(inp, out, params, pi, ringSize)
+	ring, indexes, commitmentToZero, err := generateMLSAGRingWithIndexes(inp, out, params, pi, ringSize)
 	if err != nil {
-		fmt.Printf("generateMlsagRingWithIndexes got error %v ", err)
+		fmt.Printf("generateMLSAGRingWithIndexes got error %v ", err)
 		return err
 	}
 
@@ -283,7 +283,7 @@ func (tx *Tx) prove(params *tx_generic.TxPrivacyInitParams) error {
 	var err error
 	outputCoins := make([]*privacy.CoinV2, 0)
 	for _, paymentInfo := range params.PaymentInfo {
-		outputCoin, err := privacy.NewCoinFromPaymentInfo(paymentInfo)
+		outputCoin, err := privacy.NewCoinFromPaymentInfo(paymentInfo) //We do not mind duplicated OTAs, server will handle them.
 		if err != nil {
 			return err
 		}
@@ -311,78 +311,92 @@ func (tx *Tx) prove(params *tx_generic.TxPrivacyInitParams) error {
 // ========== NORMAL VERIFY FUNCTIONS ==========
 
 //Parse params and check their validity for generating a MLSAG ring.
-func ParseParamsForRing(kvArgs map[string]interface{}, lenInput, ringSize int) (cmtIndices []uint64, myIndices []uint64, commitments []*privacy.Point, publicKeys []*privacy.Point, err error) {
+func ParseParamsForRing(kvArgs map[string]interface{}, lenInput, ringSize int) (cmtIndices []uint64, myIndices []uint64, commitments []*privacy.Point, publicKeys []*privacy.Point, assetTags []*privacy.Point, err error) {
 	if kvArgs == nil {
 		fmt.Println("kvargs is nil: need more params to proceed")
-		return nil, nil, nil, nil, errors.New("kvargs is nil: need more params to proceed")
+		return nil, nil, nil, nil, nil, errors.New("kvargs is nil: need more params to proceed")
 	}
 
 	//Get list of decoy indices.
 	tmp, ok := kvArgs[utils.CommitmentIndices]
 	if !ok {
-		return nil, nil, nil, nil, errors.New(fmt.Sprintf("decoy commitment indices not found: %v", kvArgs))
+		return nil, nil, nil, nil, nil, errors.New(fmt.Sprintf("decoy commitment indices not found: %v", kvArgs))
 	}
 
 	cmtIndices, ok = tmp.([]uint64)
 	if !ok {
-		return nil, nil, nil, nil, errors.New(fmt.Sprintf("cannot parse commitment indices: %v", tmp))
+		return nil, nil, nil, nil, nil, errors.New(fmt.Sprintf("cannot parse commitment indices: %v", tmp))
 	}
 	if len(cmtIndices) < lenInput*(ringSize-1) {
-		return nil, nil, nil, nil, errors.New(fmt.Sprintf("not enough decoy commitment indices: have %v, need at least %v (%v input coins).", len(cmtIndices), lenInput*(ringSize-1), lenInput))
+		return nil, nil, nil, nil, nil, errors.New(fmt.Sprintf("not enough decoy commitment indices: have %v, need at least %v (%v input coins).", len(cmtIndices), lenInput*(ringSize-1), lenInput))
 	}
 
 	//Get list of decoy commitments.
 	tmp, ok = kvArgs[utils.Commitments]
 	if !ok {
-		return nil, nil, nil, nil, errors.New(fmt.Sprintf("decoy commitment list not found: %v", kvArgs))
+		return nil, nil, nil, nil, nil, errors.New(fmt.Sprintf("decoy commitment list not found: %v", kvArgs))
 	}
 
 	commitments, ok = tmp.([]*privacy.Point)
 	if !ok {
-		return nil, nil, nil, nil, errors.New(fmt.Sprintf("cannot parse decoy commitment indices: %v", tmp))
+		return nil, nil, nil, nil, nil, errors.New(fmt.Sprintf("cannot parse decoy commitment indices: %v", tmp))
 	}
 	if len(commitments) < lenInput*(ringSize-1) {
-		return nil, nil, nil, nil, errors.New(fmt.Sprintf("not enough decoy commitments: have %v, need at least %v (%v input coins).", len(commitments), lenInput*(ringSize-1), lenInput))
+		return nil, nil, nil, nil, nil, errors.New(fmt.Sprintf("not enough decoy commitments: have %v, need at least %v (%v input coins).", len(commitments), lenInput*(ringSize-1), lenInput))
 	}
 
-	//Get list of decoy public key
+	//Get list of decoy public keys
 	tmp, ok = kvArgs[utils.PublicKeys]
 	if !ok {
-		return nil, nil, nil, nil, errors.New(fmt.Sprintf("decoy public keys not found: %v", kvArgs))
+		return nil, nil, nil, nil, nil, errors.New(fmt.Sprintf("decoy public keys not found: %v", kvArgs))
 	}
 
 	publicKeys, ok = tmp.([]*privacy.Point)
 	if !ok {
-		return nil, nil, nil, nil, errors.New(fmt.Sprintf("cannot parse decoy public keys: %v", tmp))
+		return nil, nil, nil, nil, nil, errors.New(fmt.Sprintf("cannot parse decoy public keys: %v", tmp))
 	}
 	if len(publicKeys) < lenInput*(ringSize-1) {
-		return nil, nil, nil, nil, errors.New(fmt.Sprintf("not enough decoy public keys: have %v, need at least %v (%v input coins).", len(publicKeys), lenInput*(ringSize-1), lenInput))
+		return nil, nil, nil, nil, nil, errors.New(fmt.Sprintf("not enough decoy public keys: have %v, need at least %v (%v input coins).", len(publicKeys), lenInput*(ringSize-1), lenInput))
+	}
+
+	//Get list of decoy asset tags
+	tmp, ok = kvArgs[utils.AssetTags]
+	if !ok {
+		return nil, nil, nil, nil, nil, errors.New(fmt.Sprintf("decoy asset tags not found: %v", kvArgs))
+	}
+
+	assetTags, ok = tmp.([]*privacy.Point)
+	if !ok {
+		return nil, nil, nil, nil, nil, errors.New(fmt.Sprintf("cannot parse decoy asset tags: %v", tmp))
+	}
+	if len(assetTags) < lenInput*(ringSize-1) {
+		return nil, nil, nil, nil, nil, errors.New(fmt.Sprintf("not enough decoy asset tags: have %v, need at least %v (%v input coins).", len(assetTags), lenInput*(ringSize-1), lenInput))
 	}
 
 	//Get list of inputcoin indices
 	tmp, ok = kvArgs[utils.MyIndices]
 	if !ok {
-		return nil, nil, nil, nil, errors.New(fmt.Sprintf("inputCoin commitment indices not found: %v", kvArgs))
+		return nil, nil, nil, nil, nil, errors.New(fmt.Sprintf("inputCoin commitment indices not found: %v", kvArgs))
 	}
 
 	myIndices, ok = tmp.([]uint64)
 	if !ok {
-		return nil, nil, nil, nil, errors.New(fmt.Sprintf("cannot parse inputCoin commitment indices: %v", tmp))
+		return nil, nil, nil, nil, nil, errors.New(fmt.Sprintf("cannot parse inputCoin commitment indices: %v", tmp))
 	}
 	if len(myIndices) != lenInput {
-		return nil, nil, nil, nil, errors.New(fmt.Sprintf("not enough indices for input coins: have %v, want %v.", len(myIndices), lenInput))
+		return nil, nil, nil, nil, nil, errors.New(fmt.Sprintf("not enough indices for input coins: have %v, want %v.", len(myIndices), lenInput))
 	}
 
 	return
 }
 
 //Generate an MLSAG ring with input decoy commitments, public keys, and indices (params.Kvargs).
-func generateMlsagRingWithIndexes(inputCoins []privacy.PlainCoin, outputCoins []*privacy.CoinV2, params *tx_generic.TxPrivacyInitParams, pi int, ringSize int) (*mlsag.Ring, [][]*big.Int, *privacy.Point, error) {
+func generateMLSAGRingWithIndexes(inputCoins []privacy.PlainCoin, outputCoins []*privacy.CoinV2, params *tx_generic.TxPrivacyInitParams, pi int, ringSize int) (*mlsag.Ring, [][]*big.Int, *privacy.Point, error) {
 	lenInput := len(inputCoins)
 	kvArgs := params.Kvargs
 
 	//Retrieve decoys' info from kvArgs
-	cmtIndices, myIndices, commitments, publicKeys, err := ParseParamsForRing(kvArgs, lenInput, ringSize)
+	cmtIndices, myIndices, commitments, publicKeys, _, err := ParseParamsForRing(kvArgs, lenInput, ringSize)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -428,14 +442,6 @@ func generateMlsagRingWithIndexes(inputCoins []privacy.PlainCoin, outputCoins []
 	return mlsag.NewRing(ring), indices, commitmentToZero, nil
 }
 
-func getMLSAGSigFromTxSigAndKeyImages(txSig []byte, keyImages []*privacy.Point) (*mlsag.MlsagSig, error) {
-	mlsagSig, err := new(mlsag.MlsagSig).FromBytes(txSig)
-	if err != nil {
-		return nil, err
-	}
-
-	return mlsag.NewMlsagSig(mlsagSig.GetC(), keyImages, mlsagSig.GetR())
-}
 
 // ========== SALARY FUNCTIONS: INIT AND VALIDATE  ==========
 
