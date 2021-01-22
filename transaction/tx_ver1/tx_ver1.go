@@ -187,7 +187,7 @@ func (tx *Tx) initPaymentWitnessParam(params *tx_generic.TxPrivacyInitParams) (*
 		}
 
 		//Get list of inputcoin indices
-		tmp, ok = params.Kvargs[utils.MyCommitmentIndices]
+		tmp, ok = params.Kvargs[utils.MyIndices]
 		if !ok {
 			return nil, errors.New(fmt.Sprintf("inputCoin commitment indices not found: %v", params.Kvargs))
 		}
