@@ -24,16 +24,18 @@ type TxParam struct {
 	receiverList     []string
 	amountList       []uint64
 	tokenID          string
+	txTokenType      int
 	md               metadata.Metadata
 }
 
 func NewTxParam(senderPrivateKey string,
-	receiverList []string, amountList []uint64, tokenID string, md metadata.Metadata) *TxParam {
+	receiverList []string, amountList []uint64, tokenID string, txTokenType int, md metadata.Metadata) *TxParam {
 	return &TxParam{
 		senderPrivateKey: senderPrivateKey,
 		receiverList:     receiverList,
 		amountList:       amountList,
 		tokenID:          tokenID,
+		txTokenType:      txTokenType,
 		md:               md,
 	}
 }
@@ -41,7 +43,7 @@ func NewTxParam(senderPrivateKey string,
 //Create payment info lists based on the provided address list and corresponding amount list.
 func CreatePaymentInfos(addrList []string, amountList []uint64) ([]*privacy.PaymentInfo, error) {
 	if len(addrList) != len(amountList) {
-		return nil, errors.New(fmt.Sprintf("length of payment address (%) and length amount (%) mismatch.", len(addrList), len(amountList)))
+		return nil, errors.New(fmt.Sprintf("length of payment address (%v) and length amount (%v) mismatch.", len(addrList), len(amountList)))
 	}
 
 	paymentInfos := make([]*privacy.PaymentInfo, 0)
@@ -288,4 +290,76 @@ func GetRandomCommitmentsAndPublicKeys(shardID byte, tokenID string, lenDecoy in
 	result[utils.AssetTags] = assetTagList
 
 	return result, nil
+}
+
+//Query and choose coins to spend + init random params
+func InitParams(privateKey string, tokenIDStr string, totalAmount uint64, hasPrivacy bool, version int) ([]privacy.PlainCoin, map[string]interface{}, error) {
+	_, err := new(common.Hash).NewHashFromStr(tokenIDStr)
+	if err != nil {
+		return nil, nil, err
+	}
+	//Create sender private key from string
+	senderWallet, err := wallet.Base58CheckDeserialize(privateKey)
+	if err != nil {
+		return nil, nil, errors.New(fmt.Sprintf("cannot init private key %v: %v", privateKey, err))
+	}
+
+	lastByteSender := senderWallet.KeySet.PaymentAddress.Pk[len(senderWallet.KeySet.PaymentAddress.Pk)-1]
+	shardID := common.GetShardIDFromLastByte(lastByteSender)
+
+	fmt.Printf("Getting UTXOs for tokenID %v...\n", tokenIDStr)
+	//Get list of UTXOs
+	utxoList, idxList, err := GetUnspentOutputCoins(privateKey, tokenIDStr, 0)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	fmt.Printf("Finish getting UTXOs for paying fee. Length of UTXOs: %v\n", len(utxoList))
+	coinV1List, coinV2List, idxV2List, err := DivideCoins(utxoList, idxList, true)
+	if err != nil {
+		return nil, nil, errors.New(fmt.Sprintf("cannot divide coin: %v", err))
+	}
+
+	var coinsToSpend []privacy.PlainCoin
+	var kvargs = make(map[string]interface{})
+	if version == 1 {
+		//Choose best coins for paying fee
+		coinsToSpend, _, err = ChooseBestCoinsByAmount(coinV1List, totalAmount)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if hasPrivacy {
+			fmt.Printf("Getting random commitments for %v.\n", tokenIDStr)
+			//Retrieve commitments and indices
+			kvargs, err = GetRandomCommitments(coinsToSpend, tokenIDStr)
+			if err != nil {
+				return nil, nil, err
+			}
+			fmt.Printf("Finish getting random commitments.\n")
+		}
+
+		return coinsToSpend, kvargs, nil
+	} else {
+		var chosenIdxList []uint64
+		coinsToSpend, chosenIdxList, err = ChooseBestCoinsByAmount(coinV2List, totalAmount)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		fmt.Printf("Getting random commitments for %v.\n", tokenIDStr)
+		//Retrieve commitments and indices
+		kvargs, err = GetRandomCommitmentsAndPublicKeys(shardID, tokenIDStr, len(coinsToSpend) * (privacy.RingSize - 1))
+		if err != nil {
+			return nil, nil, err
+		}
+		fmt.Printf("Finish getting random commitments.\n")
+		idxToSpendPRV := make([]uint64, 0)
+		for _, idx := range chosenIdxList {
+			idxToSpendPRV = append(idxToSpendPRV, idxV2List[idx])
+		}
+		kvargs[utils.MyIndices] = idxToSpendPRV
+
+		return coinsToSpend, kvargs, nil
+	}
 }

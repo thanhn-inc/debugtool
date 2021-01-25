@@ -13,7 +13,6 @@ import (
 	"github.com/thanhn-inc/debugtool/transaction/tx_generic"
 	"github.com/thanhn-inc/debugtool/transaction/tx_ver1"
 	"github.com/thanhn-inc/debugtool/transaction/tx_ver2"
-	"github.com/thanhn-inc/debugtool/transaction/utils"
 	"github.com/thanhn-inc/debugtool/wallet"
 )
 
@@ -45,43 +44,12 @@ func CreateRawTransactionVer1(param *TxParam) ([]byte, string, error) {
 		totalAmount += amount
 	}
 
-	fmt.Println("Getting UTXOs")
-	//Get list of UTXOs
-	utxoList, idxList, err := GetUnspentOutputCoins(privateKey, common.PRVIDStr, 0)
-	if err != nil {
-		return nil, "", err
-	}
-
-	fmt.Printf("Finish getting UTXOs. Length of UTXOs: %v\n", len(utxoList))
-
-	coinV1List, _, _, err := DivideCoins(utxoList, idxList, true)
-	if err != nil {
-		return nil, "", errors.New(fmt.Sprintf("cannot divide coin: %v", err))
-	}
-
 	hasPrivacy := true
 	if param.md != nil {
 		hasPrivacy = false
 	}
 
-	//Choose best coins to spend
-	coinsToSpend, _, err := ChooseBestCoinsByAmount(coinV1List, totalAmount)
-	if err != nil {
-		return nil, "", err
-	}
-
-	fmt.Println("Input coin", coinsToSpend, len(coinsToSpend))
-
-	var kvargs map[string]interface{}
-	if hasPrivacy {
-		fmt.Printf("Getting random commitments.\n")
-		//Retrieve commitments and indices
-		kvargs, err = GetRandomCommitments(coinsToSpend, common.PRVIDStr)
-		if err != nil {
-			return nil, "", err
-		}
-		fmt.Printf("Finish getting random commitments.\n")
-	}
+	coinsToSpend, kvargs, err := InitParams(privateKey, common.PRVIDStr, totalAmount, hasPrivacy, 1)
 
 	txInitParam := tx_generic.NewTxPrivacyInitParams(&(senderWallet.KeySet.PrivateKey), paymentInfos, coinsToSpend, DefaultPRVFee, hasPrivacy, &common.PRVCoinID, param.md, nil, kvargs)
 
@@ -123,50 +91,13 @@ func CreateRawTransactionVer2(param *TxParam) ([]byte, string, error) {
 		totalAmount += amount
 	}
 
-	fmt.Println("Getting UTXOs")
-	//Get list of UTXOs
-	utxoList, idxList, err := GetUnspentOutputCoins(privateKey, common.PRVIDStr, 0)
-	if err != nil {
-		return nil, "", err
-	}
-
-	fmt.Printf("Finish getting UTXOs. Length of UTXOs: %v\n", len(utxoList))
-
-	_, coinV2List, idxV2List, err := DivideCoins(utxoList, idxList, true)
-	if err != nil {
-		return nil, "", errors.New(fmt.Sprintf("cannot divide coin: %v", err))
-	}
 
 	hasPrivacy := true
 	if param.md != nil {
 		hasPrivacy = false
 	}
 
-	//Choose best coins to spend
-	coinsToSpend, chosenCoinIdxList, err := ChooseBestCoinsByAmount(coinV2List, totalAmount)
-	if err != nil {
-		return nil, "", err
-	}
-
-	var kvargs map[string]interface{}
-	fmt.Printf("Getting random commitments and public keys.\n")
-
-	pkSender := senderWallet.KeySet.PaymentAddress.Pk
-	shardID := common.GetShardIDFromLastByte(pkSender[len(pkSender)-1])
-
-	lenDecoys := len(coinsToSpend) * (privacy.RingSize - 1)
-
-	//Retrieve commitments and indices
-	kvargs, err = GetRandomCommitmentsAndPublicKeys(shardID, common.PRVIDStr, lenDecoys)
-	if err != nil {
-		return nil, "", err
-	}
-	idxToSpendList := make([]uint64, 0)
-	for _, idx := range chosenCoinIdxList {
-		idxToSpendList = append(idxToSpendList, idxV2List[idx])
-	}
-	kvargs[utils.MyIndices] = idxToSpendList
-	fmt.Printf("Finish getting random commitments and public keys.\n")
+	coinsToSpend, kvargs, err := InitParams(privateKey, common.PRVIDStr, totalAmount, hasPrivacy, 2)
 
 	txParam := tx_generic.NewTxPrivacyInitParams(&(senderWallet.KeySet.PrivateKey), paymentInfos, coinsToSpend, DefaultPRVFee, hasPrivacy, &common.PRVCoinID, param.md, nil, kvargs)
 
@@ -251,7 +182,7 @@ func CreateRawConversionTransaction(privateKey string) ([]byte, string, error) {
 }
 
 func CreateAndSendRawTransaction(privateKey string, addrList []string, amountList []uint64, version int8, md metadata.Metadata) (string, error) {
-	txParam := NewTxParam(privateKey, addrList, amountList, common.PRVIDStr, md)
+	txParam := NewTxParam(privateKey, addrList, amountList, common.PRVIDStr, 0, md)
 	encodedTx, txHash, err := CreateRawTransaction(txParam, version)
 	if err != nil {
 		return "", err
