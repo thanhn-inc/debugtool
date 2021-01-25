@@ -1,9 +1,13 @@
 package debugtool
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/thanhn-inc/debugtool/common"
 	"github.com/thanhn-inc/debugtool/metadata"
 	"github.com/thanhn-inc/debugtool/rpchandler"
+	"github.com/thanhn-inc/debugtool/rpchandler/jsonresult"
 	"github.com/thanhn-inc/debugtool/rpchandler/rpc"
 	"github.com/thanhn-inc/debugtool/wallet"
 )
@@ -116,4 +120,72 @@ func CreateAndSendPDEWithdrawalTransaction(privateKey, tokenID1, tokenID2 string
 	}
 
 	return txHash, nil
+}
+
+func GetCurrentPDEState(beaconHeight uint64) (*jsonresult.CurrentPDEState, error){
+	responseInBytes, err := rpc.GetPDEState(beaconHeight)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := rpchandler.ParseResponse(responseInBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	var pdeState jsonresult.CurrentPDEState
+	err = json.Unmarshal(response.Result, &pdeState)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pdeState, nil
+}
+
+func GetAllPDEPoolPairs(beaconHeight uint64) (map[string]*jsonresult.PDEPoolForPair, error) {
+	pdeState, err := GetCurrentPDEState(beaconHeight)
+	if err != nil {
+		return nil, err
+	}
+
+	return pdeState.PDEPoolPairs, nil
+}
+
+func GetPDEPoolPair(beaconHeight uint64, tokenID1, tokenID2 string) (*jsonresult.PDEPoolForPair, error) {
+	allPoolPairs, err := GetAllPDEPoolPairs(beaconHeight)
+	if err != nil {
+		return nil, err
+	}
+
+	keyPool := jsonresult.BuildPDEPoolForPairKey(beaconHeight, tokenID1, tokenID2)
+	if poolPair, ok := allPoolPairs[string(keyPool)]; ok {
+		return poolPair, nil
+	}
+
+	return nil, errors.New(fmt.Sprintf("cannot found pool pair for tokenID %v and %v.", tokenID1, tokenID2))
+}
+
+func GetTradeValue(tokenToSell, TokenToBuy string, sellAmount uint64) (uint64, error) {
+	bestBlocks, err := GetBestBlock()
+	if err != nil {
+		return 0, err
+	}
+
+	bestBeaconHeight := bestBlocks[-1]
+
+	poolPair, err := GetPDEPoolPair(bestBeaconHeight, tokenToSell, TokenToBuy)
+	if err != nil {
+		return 0, err
+	}
+
+	var sellPoolAmount, buyPoolAmount uint64
+	if poolPair.Token1IDStr == tokenToSell {
+		sellPoolAmount = poolPair.Token1PoolValue
+		buyPoolAmount = poolPair.Token2PoolValue
+	} else {
+		sellPoolAmount = poolPair.Token2PoolValue
+		buyPoolAmount = poolPair.Token1PoolValue
+	}
+
+	return UniswapValue(sellAmount, sellPoolAmount, buyPoolAmount)
 }
