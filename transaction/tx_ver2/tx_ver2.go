@@ -369,9 +369,9 @@ func ParseParamsForRing(kvArgs map[string]interface{}, lenInput, ringSize int) (
 	if !ok {
 		return nil, nil, nil, nil, nil, errors.New(fmt.Sprintf("cannot parse decoy asset tags: %v", tmp))
 	}
-	if len(assetTags) < lenInput*(ringSize-1) {
-		return nil, nil, nil, nil, nil, errors.New(fmt.Sprintf("not enough decoy asset tags: have %v, need at least %v (%v input coins).", len(assetTags), lenInput*(ringSize-1), lenInput))
-	}
+	//if len(assetTags) < lenInput*(ringSize-1) {
+	//	return nil, nil, nil, nil, nil, errors.New(fmt.Sprintf("not enough decoy asset tags: have %v, need at least %v (%v input coins).", len(assetTags), lenInput*(ringSize-1), lenInput))
+	//}
 
 	//Get list of inputcoin indices
 	tmp, ok = kvArgs[utils.MyIndices]

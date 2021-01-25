@@ -504,10 +504,14 @@ func createPrivKeyMlsagCA(inputCoins []privacy.PlainCoin, outputCoins []*privacy
 }
 
 func generateMlsagRingWithIndexesCA(inputCoins []privacy.PlainCoin, outputCoins []*privacy.CoinV2, params *tx_generic.TxPrivacyInitParams, pi int, shardID byte, ringSize int) (*mlsag.Ring, [][]*big.Int, []*privacy.Point, error) {
-	cmtIndices, myIndices, commitments, publicKeys, assetTags, err :=  ParseParamsForRing(params.Kvargs, len(inputCoins), ringSize)
+	cmtIndices, myIndices, commitments, publicKeys, assetTags, err := ParseParamsForRing(params.Kvargs, len(inputCoins), ringSize)
 	if err != nil {
 		return nil, nil, nil, utils.NewTransactionErr(utils.UnexpectedError, errors.New(fmt.Sprintf("ParseParamsForRing error: %v", err)))
 	}
+	if len(assetTags) < len(inputCoins)*(ringSize-1) {
+		return nil, nil, nil, errors.New(fmt.Sprintf("not enough decoy asset tags: have %v, need at least %v (%v input coins).", len(assetTags), len(inputCoins)*(ringSize-1), len(inputCoins)))
+	}
+
 	outputCoinsAsGeneric := make([]privacy.Coin, len(outputCoins))
 	for i := 0; i < len(outputCoins); i++ {
 		outputCoinsAsGeneric[i] = outputCoins[i]

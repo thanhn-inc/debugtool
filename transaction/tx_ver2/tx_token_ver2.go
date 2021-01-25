@@ -274,7 +274,7 @@ func (txToken *TxToken) initToken(txNormal *Tx, params *tx_generic.TxTokenParams
 				propertyID,
 				nil,
 				nil,
-				nil)
+				params.TokenParams.Kvargs)
 			isBurning, err := txNormal.proveToken(txParams)
 			if err != nil {
 				return utils.NewTransactionErr(utils.PrivacyTokenInitTokenDataError, err)
