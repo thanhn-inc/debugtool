@@ -18,7 +18,9 @@ func CreatePDETradeTransaction(privateKey, tokenIDToSell, tokenIDToBuy string, a
 	pdeTradeMetadata, err := metadata.NewPDETradeRequest(tokenIDToBuy, tokenIDToSell, amount, 0, 0,
 		addr, "", metadata.PDETradeRequestMeta)
 
-	return CreateRawTransaction(privateKey, []string{common.BurningAddress2}, []uint64{amount}, 1, pdeTradeMetadata)
+	txParam := NewTxParam(privateKey, []string{common.BurningAddress2}, []uint64{amount}, common.PRVIDStr, pdeTradeMetadata)
+
+	return CreateRawTransaction(txParam, 1)
 }
 func CreateAndSendPDETradeTransaction(privateKey, tokenIDToSell, tokenIDToBuy string, amount uint64) (string, error) {
 	encodedTx, txHash, err := CreatePDETradeTransaction(privateKey, tokenIDToSell, tokenIDToBuy, amount)
@@ -48,10 +50,12 @@ func CreatePDEContributeTransaction(privateKey, pairID, tokenID string, amount u
 	addr := senderWallet.Base58CheckSerialize(wallet.PaymentAddressType)
 	md, err := metadata.NewPDEContribution(pairID, addr, amount, tokenID, metadata.PDEContributionMeta)
 
+	txParam := NewTxParam(privateKey, []string{common.BurningAddress2}, []uint64{amount}, tokenID, md)
+
 	if tokenID == common.PRVIDStr {
-		return CreateRawTransaction(privateKey, []string{common.BurningAddress2}, []uint64{amount}, 1, md)
+		return CreateRawTransaction(txParam, 1)
 	} else {
-		return CreateRawTokenTransaction(privateKey, []string{common.BurningAddress2}, []uint64{amount}, 1, tokenID, 1, md)
+		return CreateRawTokenTransaction(txParam, 1)
 	}
 }
 func CreateAndSendPDEContributeTransaction(privateKey, pairID, tokenID string, amount uint64) (string, error) {
@@ -91,7 +95,9 @@ func CreatePDEWithdrawalTransaction(privateKey, tokenID1, tokenID2 string, share
 	addr := senderWallet.Base58CheckSerialize(wallet.PaymentAddressType)
 	pdeTradeMetadata, err := metadata.NewPDEWithdrawalRequest(addr, tokenID2, tokenID1, sharedAmount, metadata.PDEWithdrawalRequestMeta)
 
-	return CreateRawTransaction(privateKey, []string{}, []uint64{}, 1, pdeTradeMetadata)
+	txParam := NewTxParam(privateKey, []string{}, []uint64{}, common.PRVIDStr, pdeTradeMetadata)
+
+	return CreateRawTransaction(txParam, 1)
 }
 func CreateAndSendPDEWithdrawalTransaction(privateKey, tokenID1, tokenID2 string, sharedAmount uint64) (string, error) {
 	encodedTx, txHash, err := CreatePDEWithdrawalTransaction(privateKey, tokenID1, tokenID2, sharedAmount)

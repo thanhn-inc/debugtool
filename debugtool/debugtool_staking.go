@@ -53,10 +53,12 @@ func CreateStakingTransaction(privateKey, privateSeed, candidateAddr, rewardRece
 
 	stakingAmount := uint64(1750000000000)
 
-	pdeTradeMetadata, err := metadata.NewStakingMetadata(metadata.ShardStakingMeta, funderAddr, rewardReceiverAddr, stakingAmount,
+	stakingMetadata, err := metadata.NewStakingMetadata(metadata.ShardStakingMeta, funderAddr, rewardReceiverAddr, stakingAmount,
 		base58.Base58Check{}.Encode(committeePKBytes, common.ZeroByte), autoStack)
 
-	return CreateRawTransaction(privateKey, []string{common.BurningAddress2}, []uint64{stakingAmount}, 1, pdeTradeMetadata)
+	txParam := NewTxParam(privateKey, []string{common.BurningAddress2}, []uint64{stakingAmount}, common.PRVIDStr, stakingMetadata)
+
+	return CreateRawTransaction(txParam, 1)
 }
 func CreateAndSendStakingTransaction(privateKey, privateSeed, candidateAddr, rewardReceiverAddr string, autoStack bool) (string, error) {
 	encodedTx, txHash, err := CreateStakingTransaction(privateKey, privateSeed, candidateAddr, rewardReceiverAddr, autoStack)
@@ -113,9 +115,11 @@ func CreateUnStakingTransaction(privateKey, privateSeed, candidateAddr string) (
 		return nil, "", errors.New(fmt.Sprintf("committe to bytes error: %v", err))
 	}
 
-	pdeTradeMetadata, err := metadata.NewStopAutoStakingMetadata(metadata.StopAutoStakingMeta, base58.Base58Check{}.Encode(committeePKBytes, common.ZeroByte))
+	unStakingMetadata, err := metadata.NewStopAutoStakingMetadata(metadata.StopAutoStakingMeta, base58.Base58Check{}.Encode(committeePKBytes, common.ZeroByte))
 
-	return CreateRawTransaction(privateKey, []string{common.BurningAddress2}, []uint64{0}, 1, pdeTradeMetadata)
+	txParam := NewTxParam(privateKey, []string{common.BurningAddress2}, []uint64{0}, common.PRVIDStr, unStakingMetadata)
+
+	return CreateRawTransaction(txParam, 1)
 }
 func CreateAndSendUnStakingTransaction(privateKey, privateSeed, candidateAddr string) (string, error) {
 	encodedTx, txHash, err := CreateUnStakingTransaction(privateKey, privateSeed, candidateAddr)
@@ -148,9 +152,11 @@ func CreateWithDrawRewardTransaction(privateKey, addr string) ([]byte, string, e
 		addr = funderAddr
 	}
 
-	pdeTradeMetadata, err := metadata.NewWithDrawRewardRequest(common.PRVIDStr, addr, 1, metadata.WithDrawRewardRequestMeta)
+	withdrawRewardMetadata, err := metadata.NewWithDrawRewardRequest(common.PRVIDStr, addr, 0, metadata.WithDrawRewardRequestMeta)
 
-	return CreateRawTransaction(privateKey, []string{}, []uint64{}, 1, pdeTradeMetadata)
+	txParam := NewTxParam(privateKey, []string{}, []uint64{}, common.PRVIDStr, withdrawRewardMetadata)
+
+	return CreateRawTransaction(txParam, 1)
 }
 func CreateAndSendWithDrawRewardTransaction(privateKey, addr string) (string, error) {
 	encodedTx, txHash, err := CreateWithDrawRewardTransaction(privateKey, addr)
