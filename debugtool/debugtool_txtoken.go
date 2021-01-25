@@ -187,7 +187,7 @@ func CreateRawTokenTransactionVer2(txParam *TxParam) ([]byte, string, error) {
 			totalAmount, txParam.txTokenType, tokenReceivers, coinsTokenToSpend, false, 0, kvargsToken)
 
 	txTokenParam := tx_generic.NewTxTokenParams(&senderWallet.KeySet.PrivateKey, []*privacy.PaymentInfo{}, coinsToSpendPRV, prvFee,
-		tokenParam, txParam.md, true, txParam.md == nil, shardID, nil, kvargsPRV)
+		tokenParam, txParam.md, true, true, shardID, nil, kvargsPRV)
 
 	tx := new(tx_ver2.TxToken)
 	err = tx.Init(txTokenParam)
