@@ -17,7 +17,16 @@ import (
 	"github.com/thanhn-inc/debugtool/wallet"
 )
 
-func CreateRawTransaction(privateKey string, addrList []string, amountList []uint64, version int8, md metadata.Metadata) ([]byte, string, error) {
+func CreateRawTransaction(param *TxParam, version int8) ([]byte, string, error) {
+	if version == 2 {
+		return CreateRawTransactionVer2(param)
+	} else {
+		return CreateRawTransactionVer1(param)
+	}
+}
+
+func CreateRawTransactionVer1(param *TxParam) ([]byte, string, error) {
+	privateKey := param.senderPrivateKey
 	//Create sender private key from string
 	senderWallet, err := wallet.Base58CheckDeserialize(privateKey)
 	if err != nil {
@@ -25,14 +34,14 @@ func CreateRawTransaction(privateKey string, addrList []string, amountList []uin
 	}
 
 	//Create list of payment infos
-	paymentInfos, err := CreatePaymentInfos(addrList, amountList)
+	paymentInfos, err := CreatePaymentInfos(param.receiverList, param.amountList)
 	if err != nil {
 		return nil, "", err
 	}
 
 	//Calculate the total transacted amount
 	totalAmount := DefaultPRVFee
-	for _, amount := range amountList {
+	for _, amount := range param.amountList {
 		totalAmount += amount
 	}
 
@@ -45,100 +54,138 @@ func CreateRawTransaction(privateKey string, addrList []string, amountList []uin
 
 	fmt.Printf("Finish getting UTXOs. Length of UTXOs: %v\n", len(utxoList))
 
-	coinV1List, coinV2List, idxV2List, err := DivideCoins(utxoList, idxList, true)
+	coinV1List, _, _, err := DivideCoins(utxoList, idxList, true)
 	if err != nil {
 		return nil, "", errors.New(fmt.Sprintf("cannot divide coin: %v", err))
 	}
 
 	hasPrivacy := true
-	if md != nil {
+	if param.md != nil {
 		hasPrivacy = false
 	}
 
-	if version == 1 {
-		//Choose best coins to spend
-		coinsToSpend, _, err := ChooseBestCoinsByAmount(coinV1List, totalAmount)
-		if err != nil {
-			return nil, "", err
-		}
-
-		fmt.Println("Input coin", coinsToSpend, len(coinsToSpend))
-
-		var kvargs map[string]interface{}
-		if hasPrivacy {
-			fmt.Printf("Getting random commitments.\n")
-			//Retrieve commitments and indices
-			kvargs, err = GetRandomCommitments(coinsToSpend, common.PRVIDStr)
-			if err != nil {
-				return nil, "", err
-			}
-			fmt.Printf("Finish getting random commitments.\n")
-		}
-
-		txParam := tx_generic.NewTxPrivacyInitParams(&(senderWallet.KeySet.PrivateKey), paymentInfos, coinsToSpend, DefaultPRVFee, hasPrivacy, &common.PRVCoinID, md, nil, kvargs)
-
-		tx := new(tx_ver1.Tx)
-		err = tx.Init(txParam)
-		if err != nil {
-			return nil, "", errors.New(fmt.Sprintf("init txver1 error: %v", err))
-		}
-
-		txBytes, err := json.Marshal(tx)
-		if err != nil {
-			return nil, "", errors.New(fmt.Sprintf("cannot marshal txver1: %v", err))
-		}
-
-		fmt.Println("tx created", string(txBytes))
-
-		base58CheckData := base58.Base58Check{}.Encode(txBytes, common.ZeroByte)
-
-		return []byte(base58CheckData), tx.Hash().String(), nil
-	} else {
-		//Choose best coins to spend
-		coinsToSpend, chosenCoinIdxList, err := ChooseBestCoinsByAmount(coinV2List, totalAmount)
-		if err != nil {
-			return nil, "", err
-		}
-
-		var kvargs map[string]interface{}
-		fmt.Printf("Getting random commitments and public keys.\n")
-
-		pkSender := senderWallet.KeySet.PaymentAddress.Pk
-		shardID := common.GetShardIDFromLastByte(pkSender[len(pkSender)-1])
-
-		lenDecoys := len(coinsToSpend) * (privacy.RingSize - 1)
-
-		//Retrieve commitments and indices
-		kvargs, err = GetRandomCommitmentsAndPublicKeys(shardID, common.PRVIDStr, lenDecoys)
-		if err != nil {
-			return nil, "", err
-		}
-		idxToSpendList := make([]uint64, 0)
-		for _, idx := range chosenCoinIdxList {
-			idxToSpendList = append(idxToSpendList, idxV2List[idx])
-		}
-		kvargs[utils.MyIndices] = idxToSpendList
-		fmt.Printf("Finish getting random commitments and public keys.\n")
-
-		txParam := tx_generic.NewTxPrivacyInitParams(&(senderWallet.KeySet.PrivateKey), paymentInfos, coinsToSpend, DefaultPRVFee, hasPrivacy, &common.PRVCoinID, md, nil, kvargs)
-
-		tx := new(tx_ver2.Tx)
-		err = tx.Init(txParam)
-		if err != nil {
-			return nil, "", errors.New(fmt.Sprintf("init txver2 error: %v", err))
-		}
-
-		txBytes, err := json.Marshal(tx)
-		if err != nil {
-			return nil, "", errors.New(fmt.Sprintf("cannot marshal txver2: %v", err))
-		}
-
-		fmt.Println("tx created", string(txBytes))
-
-		base58CheckData := base58.Base58Check{}.Encode(txBytes, common.ZeroByte)
-
-		return []byte(base58CheckData), tx.Hash().String(), nil
+	//Choose best coins to spend
+	coinsToSpend, _, err := ChooseBestCoinsByAmount(coinV1List, totalAmount)
+	if err != nil {
+		return nil, "", err
 	}
+
+	fmt.Println("Input coin", coinsToSpend, len(coinsToSpend))
+
+	var kvargs map[string]interface{}
+	if hasPrivacy {
+		fmt.Printf("Getting random commitments.\n")
+		//Retrieve commitments and indices
+		kvargs, err = GetRandomCommitments(coinsToSpend, common.PRVIDStr)
+		if err != nil {
+			return nil, "", err
+		}
+		fmt.Printf("Finish getting random commitments.\n")
+	}
+
+	txInitParam := tx_generic.NewTxPrivacyInitParams(&(senderWallet.KeySet.PrivateKey), paymentInfos, coinsToSpend, DefaultPRVFee, hasPrivacy, &common.PRVCoinID, param.md, nil, kvargs)
+
+	tx := new(tx_ver1.Tx)
+	err = tx.Init(txInitParam)
+	if err != nil {
+		return nil, "", errors.New(fmt.Sprintf("init txver1 error: %v", err))
+	}
+
+	txBytes, err := json.Marshal(tx)
+	if err != nil {
+		return nil, "", errors.New(fmt.Sprintf("cannot marshal txver1: %v", err))
+	}
+
+	fmt.Println("tx created", string(txBytes))
+
+	base58CheckData := base58.Base58Check{}.Encode(txBytes, common.ZeroByte)
+
+	return []byte(base58CheckData), tx.Hash().String(), nil
+}
+
+func CreateRawTransactionVer2(param *TxParam) ([]byte, string, error) {
+	privateKey := param.senderPrivateKey
+	//Create sender private key from string
+	senderWallet, err := wallet.Base58CheckDeserialize(privateKey)
+	if err != nil {
+		return nil, "", errors.New(fmt.Sprintf("cannot init private key %v: %v", privateKey, err))
+	}
+
+	//Create list of payment infos
+	paymentInfos, err := CreatePaymentInfos(param.receiverList, param.amountList)
+	if err != nil {
+		return nil, "", err
+	}
+
+	//Calculate the total transacted amount
+	totalAmount := DefaultPRVFee
+	for _, amount := range param.amountList {
+		totalAmount += amount
+	}
+
+	fmt.Println("Getting UTXOs")
+	//Get list of UTXOs
+	utxoList, idxList, err := GetUnspentOutputCoins(privateKey, common.PRVIDStr, 0)
+	if err != nil {
+		return nil, "", err
+	}
+
+	fmt.Printf("Finish getting UTXOs. Length of UTXOs: %v\n", len(utxoList))
+
+	_, coinV2List, idxV2List, err := DivideCoins(utxoList, idxList, true)
+	if err != nil {
+		return nil, "", errors.New(fmt.Sprintf("cannot divide coin: %v", err))
+	}
+
+	hasPrivacy := true
+	if param.md != nil {
+		hasPrivacy = false
+	}
+
+	//Choose best coins to spend
+	coinsToSpend, chosenCoinIdxList, err := ChooseBestCoinsByAmount(coinV2List, totalAmount)
+	if err != nil {
+		return nil, "", err
+	}
+
+	var kvargs map[string]interface{}
+	fmt.Printf("Getting random commitments and public keys.\n")
+
+	pkSender := senderWallet.KeySet.PaymentAddress.Pk
+	shardID := common.GetShardIDFromLastByte(pkSender[len(pkSender)-1])
+
+	lenDecoys := len(coinsToSpend) * (privacy.RingSize - 1)
+
+	//Retrieve commitments and indices
+	kvargs, err = GetRandomCommitmentsAndPublicKeys(shardID, common.PRVIDStr, lenDecoys)
+	if err != nil {
+		return nil, "", err
+	}
+	idxToSpendList := make([]uint64, 0)
+	for _, idx := range chosenCoinIdxList {
+		idxToSpendList = append(idxToSpendList, idxV2List[idx])
+	}
+	kvargs[utils.MyIndices] = idxToSpendList
+	fmt.Printf("Finish getting random commitments and public keys.\n")
+
+	txParam := tx_generic.NewTxPrivacyInitParams(&(senderWallet.KeySet.PrivateKey), paymentInfos, coinsToSpend, DefaultPRVFee, hasPrivacy, &common.PRVCoinID, param.md, nil, kvargs)
+
+	tx := new(tx_ver2.Tx)
+	err = tx.Init(txParam)
+	if err != nil {
+		return nil, "", errors.New(fmt.Sprintf("init txver2 error: %v", err))
+	}
+
+	txBytes, err := json.Marshal(tx)
+	if err != nil {
+		return nil, "", errors.New(fmt.Sprintf("cannot marshal txver2: %v", err))
+	}
+
+	fmt.Println("tx created", string(txBytes))
+
+	base58CheckData := base58.Base58Check{}.Encode(txBytes, common.ZeroByte)
+
+	return []byte(base58CheckData), tx.Hash().String(), nil
 }
 
 func CreateRawConversionTransaction(privateKey string) ([]byte, string, error) {
