@@ -17,10 +17,22 @@ import (
 )
 
 func CreateRawTokenTransaction(txParam *TxParam, version int8) ([]byte, string, error) {
-	if version == 2 {
-		return CreateRawTokenTransactionVer2(txParam)
+	if version == -1 {//Try either one of the version, if possible
+		encodedTx, txHash, err := CreateRawTokenTransactionVer1(txParam)
+		if err != nil {
+			encodedTx, txHash, err1 := CreateRawTokenTransactionVer2(txParam)
+			if err1 != nil {
+				return nil, "", errors.New(fmt.Sprintf("cannot create raw token transaction for either version: %v, %v", err, err1))
+			}
+
+			return encodedTx, txHash, nil
+		}
+
+		return encodedTx, txHash, nil
+	} else if version == 2 {
+		return CreateRawTransactionVer2(txParam)
 	} else {
-		return CreateRawTokenTransactionVer1(txParam)
+		return CreateRawTransactionVer1(txParam)
 	}
 }
 
