@@ -109,7 +109,7 @@ func GetBalance(privkey, tokenID string) {
 }
 
 //PDEX
-func GetPDEState(beaconHeight int64) {
+func GetPDEState(beaconHeight uint64) {
 	fmt.Println("========== GET PDE STATE ==========")
 	b, err := rpc.GetPDEState(beaconHeight)
 	if err != nil {
@@ -244,23 +244,53 @@ func main() {
 		//Init network
 		if args[0] == "port" {
 			SwitchPort(args[1])
-			fmt.Printf("New target: %v-%v\n", args[0], rpchandler.Server.GetURL())
+			activeShards, err := debugtool.GetActiveShard()
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Printf("Init to: %v, number of active shards: %v\n", rpchandler.Server.GetURL(), activeShards)
+			common.MaxShardNumber = activeShards
 		}
 		if args[0] == "inittestnet" {
 			rpchandler.Server = new(rpchandler.RPCServer).InitTestnet()
-			fmt.Printf("New target: %v-%v\n", args[0], rpchandler.Server.GetURL())
+			activeShards, err := debugtool.GetActiveShard()
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Printf("Init to: %v, number of active shards: %v\n", rpchandler.Server.GetURL(), activeShards)
+			common.MaxShardNumber = activeShards
 		}
 		if args[0] == "initdevnet" {
 			rpchandler.Server = new(rpchandler.RPCServer).InitDevNet()
-			fmt.Printf("New target: %v-%v\n", args[0], rpchandler.Server.GetURL())
+			activeShards, err := debugtool.GetActiveShard()
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Printf("Init to: %v, number of active shards: %v\n", rpchandler.Server.GetURL(), activeShards)
+			common.MaxShardNumber = activeShards
 		}
 		if args[0] == "initmainnet" {
 			rpchandler.Server = new(rpchandler.RPCServer).InitMainnet()
-			fmt.Printf("New target: %v-%v\n", args[0], rpchandler.Server.GetURL())
+			activeShards, err := debugtool.GetActiveShard()
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Printf("Init to: %v, number of active shards: %v\n", rpchandler.Server.GetURL(), activeShards)
+			common.MaxShardNumber = activeShards
 		}
 		if args[0] == "initlocal" {
 			rpchandler.Server = new(rpchandler.RPCServer).InitLocal(args[1])
-			fmt.Printf("New target: %v-%v\n", args[0], rpchandler.Server.GetURL())
+			activeShards, err := debugtool.GetActiveShard()
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Printf("Init to: %v, number of active shards: %v\n", rpchandler.Server.GetURL(), activeShards)
+			common.MaxShardNumber = activeShards
 		}
 
 		//PRV RPCs
@@ -468,9 +498,8 @@ func main() {
 
 		//TOKEN RPCs
 		if args[0] == "inittoken" {
-			if len(args) < 3 {
-				fmt.Println("need at least 3 arguments.")
-				continue
+			if len(args) < 5 {
+				fmt.Println("need at least 5 arguments.")
 			}
 
 			var privateKey string
@@ -489,12 +518,34 @@ func main() {
 				privateKey = args[1]
 			}
 
-			b, err := rpc.CreateAndSendPrivacyCustomTokenTransaction(privateKey, args[2])
+			amount, err := strconv.ParseInt(args[2], 10, 64)
 			if err != nil {
-				fmt.Println(err)
+				fmt.Println("cannot parse amount", args[4])
 				continue
 			}
-			fmt.Println(string(b))
+
+			//Default version is 2
+			txVersion := int8(2)
+			if len(args) > 3 {
+				tmpVersion, err := strconv.ParseUint(args[3], 10, 32)
+				if err != nil {
+					fmt.Println("cannot parse version", err)
+					continue
+				}
+				if tmpVersion > 2 {
+					fmt.Println("version invalid", tmpVersion)
+					continue
+				}
+				txVersion = int8(tmpVersion)
+			}
+
+			txHash, err := debugtool.CreateAndSendRawTokenTransaction(privateKey, []string{}, []uint64{uint64(amount)}, txVersion, "", 0)
+			if err != nil {
+				fmt.Println("CreateAndSendRawTokenTransaction returns an error:", err)
+				continue
+			}
+
+			fmt.Printf("CreateAndSendRawTokenTransaction succeeded. TxHash: %v.\n", txHash)
 		}
 		if args[0] == "balancetoken" {
 			var privateKey string
@@ -659,7 +710,13 @@ func main() {
 			GetBeaconBestState()
 		}
 		if args[0] == "bestblock" {
-			GetBestBlock()
+			res, err := debugtool.GetBestBlock()
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			fmt.Println(res)
 		}
 		if args[0] == "mempool" {
 			GetRawMempool()
@@ -788,17 +845,34 @@ func main() {
 			fmt.Printf("CreateAndSendPDEWithdrawalTransaction succeeded. TxHash: %v.\n", txHash)
 		}
 		if args[0] == "pdestate" {
-			if len(args) < 2 {
-				fmt.Println("need at least 2 arguments")
-				continue
-			}
-			bHeight, err := strconv.ParseInt(args[1], 10, 32)
-			if err != nil {
-				fmt.Println("cannot get beacon height")
-				continue
+			var bHeight uint64
+			var err error
+			if len(args) > 1{
+				tmpHeight, err := strconv.ParseInt(args[1], 10, 32)
+				if err != nil {
+					fmt.Println("cannot get beacon height", err)
+					continue
+				}
+
+				bHeight = uint64(tmpHeight)
+			} else { //Get the latest state
+				bestBlocks, err := debugtool.GetBestBlock()
+				if err != nil {
+					fmt.Println("cannot get best block", err)
+					continue
+				}
+
+				bHeight = bestBlocks[-1]
 			}
 
-			GetPDEState(bHeight)
+			currentState, err := debugtool.GetCurrentPDEState(bHeight)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			b, _ := json.Marshal(currentState)
+			fmt.Printf("Beacon Height: %v, state:\n%v\n", bHeight, string(b))
+
 		}
 
 		//STAKING
