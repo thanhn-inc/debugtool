@@ -251,7 +251,8 @@ func CreateRawConversionTransaction(privateKey string) ([]byte, string, error) {
 }
 
 func CreateAndSendRawTransaction(privateKey string, addrList []string, amountList []uint64, version int8, md metadata.Metadata) (string, error) {
-	encodedTx, txHash, err := CreateRawTransaction(privateKey, addrList, amountList, version, md)
+	txParam := NewTxParam(privateKey, addrList, amountList, common.PRVIDStr, md)
+	encodedTx, txHash, err := CreateRawTransaction(txParam, version)
 	if err != nil {
 		return "", err
 	}
