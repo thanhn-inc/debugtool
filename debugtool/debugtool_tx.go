@@ -150,24 +150,28 @@ func CreateRawConversionTransaction(privateKey string) ([]byte, string, error) {
 
 	fmt.Println("Getting UTXOs")
 	//Get list of UTXOs
-	utxoList, _, err := GetUnspentOutputCoins(privateKey, common.PRVIDStr, 0)
+	utxoList, idxList, err := GetUnspentOutputCoins(privateKey, common.PRVIDStr, 0)
 	if err != nil {
 		return nil, "", err
 	}
 
 	fmt.Printf("Finish getting UTXOs. Length of UTXOs: %v\n", len(utxoList))
 
-	//Calculating the total amount being converted.
-	totalAmount := uint64(0)
-	for _, utxo := range utxoList {
-		totalAmount += utxo.GetValue()
+	//Get list of coinv1 to convert.
+	coinV1List, _, _, err := DivideCoins(utxoList, idxList, true)
+	if err != nil {
+		return nil, "", errors.New(fmt.Sprintf("cannot divide coin: %v", err))
 	}
 
+	//Calculating the total amount being converted.
+	totalAmount := uint64(0)
+	for _, utxo := range coinV1List {
+		totalAmount += utxo.GetValue()
+	}
 	if totalAmount < DefaultPRVFee {
 		fmt.Printf("Total amount (%v) is less than txFee (%v).\n", totalAmount, DefaultPRVFee)
 		return nil, "", errors.New(fmt.Sprintf("Total amount (%v) is less than txFee (%v).\n", totalAmount, DefaultPRVFee))
 	}
-
 	totalAmount -= DefaultPRVFee
 
 	uniquePayment := privacy.PaymentInfo{PaymentAddress: senderWallet.KeySet.PaymentAddress, Amount: totalAmount, Message: []byte{}}

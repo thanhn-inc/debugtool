@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/thanhn-inc/debugtool/common"
 	"github.com/thanhn-inc/debugtool/common/base58"
+	"github.com/thanhn-inc/debugtool/metadata"
 	"github.com/thanhn-inc/debugtool/privacy"
 	"github.com/thanhn-inc/debugtool/rpchandler"
 	"github.com/thanhn-inc/debugtool/rpchandler/jsonresult"
@@ -17,6 +18,25 @@ import (
 )
 
 const DefaultPRVFee = uint64(60)
+
+type TxParam struct {
+	senderPrivateKey string
+	receiverList     []string
+	amountList       []uint64
+	tokenID          string
+	md               metadata.Metadata
+}
+
+func NewTxParam(senderPrivateKey string,
+	receiverList []string, amountList []uint64, tokenID string, md metadata.Metadata) *TxParam {
+	return &TxParam{
+		senderPrivateKey: senderPrivateKey,
+		receiverList:     receiverList,
+		amountList:       amountList,
+		tokenID:          tokenID,
+		md:               md,
+	}
+}
 
 //Create payment info lists based on the provided address list and corresponding amount list.
 func CreatePaymentInfos(addrList []string, amountList []uint64) ([]*privacy.PaymentInfo, error) {
@@ -92,7 +112,7 @@ func ChooseBestCoinsByAmount(coinList []privacy.PlainCoin, requiredAmount uint64
 
 //Divide list of coins w.r.t their version and sort them by values if needed.
 func DivideCoins(coinList []privacy.PlainCoin, idxList []*big.Int, needSorted bool) ([]privacy.PlainCoin, []privacy.PlainCoin, []uint64, error) {
-	if idxList == nil {
+	if idxList != nil {
 		if len(coinList) != len(idxList) {
 			return nil, nil, nil, errors.New(fmt.Sprintf("cannot divide coins: length of coin (%v) != length of index (%v)", len(coinList), len(idxList)))
 		}
