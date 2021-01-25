@@ -58,7 +58,7 @@ func CreateStakingTransaction(privateKey, privateSeed, candidateAddr, rewardRece
 
 	txParam := NewTxParam(privateKey, []string{common.BurningAddress2}, []uint64{stakingAmount}, common.PRVIDStr, 0, stakingMetadata)
 
-	return CreateRawTransaction(txParam, 1)
+	return CreateRawTransaction(txParam, -1)
 }
 func CreateAndSendStakingTransaction(privateKey, privateSeed, candidateAddr, rewardReceiverAddr string, autoStack bool) (string, error) {
 	encodedTx, txHash, err := CreateStakingTransaction(privateKey, privateSeed, candidateAddr, rewardReceiverAddr, autoStack)
@@ -119,7 +119,7 @@ func CreateUnStakingTransaction(privateKey, privateSeed, candidateAddr string) (
 
 	txParam := NewTxParam(privateKey, []string{common.BurningAddress2}, []uint64{0}, common.PRVIDStr, 0, unStakingMetadata)
 
-	return CreateRawTransaction(txParam, 1)
+	return CreateRawTransaction(txParam, -1)
 }
 func CreateAndSendUnStakingTransaction(privateKey, privateSeed, candidateAddr string) (string, error) {
 	encodedTx, txHash, err := CreateUnStakingTransaction(privateKey, privateSeed, candidateAddr)
@@ -156,7 +156,7 @@ func CreateWithDrawRewardTransaction(privateKey, addr string) ([]byte, string, e
 
 	txParam := NewTxParam(privateKey, []string{}, []uint64{}, common.PRVIDStr, 0, withdrawRewardMetadata)
 
-	return CreateRawTransaction(txParam, 1)
+	return CreateRawTransaction(txParam, -1)
 }
 func CreateAndSendWithDrawRewardTransaction(privateKey, addr string) (string, error) {
 	encodedTx, txHash, err := CreateWithDrawRewardTransaction(privateKey, addr)

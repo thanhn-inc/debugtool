@@ -120,6 +120,8 @@ func CreateRawTokenTransactionVer1(txParam *TxParam) ([]byte, string, error) {
 		return nil, "", errors.New(fmt.Sprintf("cannot marshal txtokenver1: %v", err))
 	}
 
+	fmt.Println("txtokenver 1 created", string(txBytes))
+
 	base58CheckData := base58.Base58Check{}.Encode(txBytes, common.ZeroByte)
 
 	return []byte(base58CheckData), tx.Hash().String(), nil
@@ -197,6 +199,8 @@ func CreateRawTokenTransactionVer2(txParam *TxParam) ([]byte, string, error) {
 	if err != nil {
 		return nil, "", errors.New(fmt.Sprintf("cannot marshal txtokenver1: %v", err))
 	}
+
+	fmt.Println("txtokenver 2 created", string(txBytes))
 
 	base58CheckData := base58.Base58Check{}.Encode(txBytes, common.ZeroByte)
 

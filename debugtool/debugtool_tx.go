@@ -76,7 +76,7 @@ func CreateRawTransactionVer1(param *TxParam) ([]byte, string, error) {
 		return nil, "", errors.New(fmt.Sprintf("cannot marshal txver1: %v", err))
 	}
 
-	fmt.Println("tx created", string(txBytes))
+	fmt.Println("txver 1 created", string(txBytes))
 
 	base58CheckData := base58.Base58Check{}.Encode(txBytes, common.ZeroByte)
 
@@ -124,7 +124,7 @@ func CreateRawTransactionVer2(param *TxParam) ([]byte, string, error) {
 		return nil, "", errors.New(fmt.Sprintf("cannot marshal txver2: %v", err))
 	}
 
-	fmt.Println("tx created", string(txBytes))
+	fmt.Println("txver 2 created", string(txBytes))
 
 	base58CheckData := base58.Base58Check{}.Encode(txBytes, common.ZeroByte)
 
