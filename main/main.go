@@ -448,7 +448,7 @@ func main() {
 			if tokenID == common.PRVIDStr {
 				txHash, err := debugtool.CreateAndSendRawConversionTransaction(privateKey)
 				if err != nil {
-					fmt.Println("CreateAndSendRawTransaction returns an error:", err)
+					fmt.Println("CreateAndSendRawConversionTransaction returns an error:", err)
 					continue
 				}
 
@@ -456,7 +456,7 @@ func main() {
 			} else {
 				txHash, err := debugtool.CreateAndSendRawTokenConversionTransaction(privateKey, tokenID)
 				if err != nil {
-					fmt.Println("CreateAndSendRawTransaction returns an error:", err)
+					fmt.Println("CreateAndSendRawTokenConversionTransaction returns an error:", err)
 					continue
 				}
 
@@ -579,13 +579,28 @@ func main() {
 				}
 			}
 
-			amount, err := strconv.ParseInt(args[4], 10, 32)
+			amount, err := strconv.ParseInt(args[4], 10, 64)
 			if err != nil {
 				fmt.Println("cannot parse amount", args[4])
 				continue
 			}
 
-			txHash, err := debugtool.CreateAndSendRawTokenTransaction(privateKey, []string{paymentAddress}, []uint64{uint64(amount)}, 1, tokenID, 1)
+			//Default version is 2
+			txVersion := int8(2)
+			if len(args) > 5 {
+				tmpVersion, err := strconv.ParseUint(args[5], 10, 32)
+				if err != nil {
+					fmt.Println("cannot parse version", err)
+					continue
+				}
+				if tmpVersion > 2 {
+					fmt.Println("version invalid", tmpVersion)
+					continue
+				}
+				txVersion = int8(tmpVersion)
+			}
+
+			txHash, err := debugtool.CreateAndSendRawTokenTransaction(privateKey, []string{paymentAddress}, []uint64{uint64(amount)}, txVersion, tokenID, 1)
 			if err != nil {
 				fmt.Println("CreateAndSendRawTokenTransaction returns an error:", err)
 				continue
