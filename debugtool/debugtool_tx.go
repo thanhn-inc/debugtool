@@ -18,9 +18,9 @@ import (
 
 func CreateRawTransaction(param *TxParam, version int8) ([]byte, string, error) {
 	if version == -1 {//Try either one of the version, if possible
-		encodedTx, txHash, err := CreateRawTokenTransactionVer1(param)
+		encodedTx, txHash, err := CreateRawTransactionVer1(param)
 		if err != nil {
-			encodedTx, txHash, err1 := CreateRawTokenTransactionVer2(param)
+			encodedTx, txHash, err1 := CreateRawTransactionVer2(param)
 			if err1 != nil {
 				return nil, "", errors.New(fmt.Sprintf("cannot create raw transaction for either version: %v, %v", err, err1))
 			}
