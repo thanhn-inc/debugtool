@@ -195,7 +195,7 @@ func PDETradeToken(privKeyStr, sellToken, amount string) ([]byte, error) {
 	return rpchandler.Server.SendPostRequestWithQuery(query)
 }
 
-func GetPDEState(beaconHeight int64) ([]byte, error){
+func GetPDEState(beaconHeight uint64) ([]byte, error){
 	query := fmt.Sprintf(`{
     "id": 1,
     "jsonrpc": "1.0",
