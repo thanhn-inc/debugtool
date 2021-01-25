@@ -140,7 +140,7 @@ func CreateRawConversionTransaction(privateKey string) ([]byte, string, error) {
 
 	fmt.Println("Getting UTXOs")
 	//Get list of UTXOs
-	utxoList, idxList, err := GetUnspentOutputCoins(privateKey, common.PRVIDStr, 0)
+	utxoList, _, err := GetUnspentOutputCoins(privateKey, common.PRVIDStr, 0)
 	if err != nil {
 		return nil, "", err
 	}
@@ -148,9 +148,13 @@ func CreateRawConversionTransaction(privateKey string) ([]byte, string, error) {
 	fmt.Printf("Finish getting UTXOs. Length of UTXOs: %v\n", len(utxoList))
 
 	//Get list of coinv1 to convert.
-	coinV1List, _, _, err := DivideCoins(utxoList, idxList, true)
+	coinV1List, _, _, err := DivideCoins(utxoList, nil, true)
 	if err != nil {
 		return nil, "", errors.New(fmt.Sprintf("cannot divide coin: %v", err))
+	}
+
+	if len(coinV1List) == 0 {
+		return nil, "", errors.New("no CoinV1 left to be converted")
 	}
 
 	//Calculating the total amount being converted.
@@ -167,7 +171,7 @@ func CreateRawConversionTransaction(privateKey string) ([]byte, string, error) {
 	uniquePayment := privacy.PaymentInfo{PaymentAddress: senderWallet.KeySet.PaymentAddress, Amount: totalAmount, Message: []byte{}}
 
 	//Create tx conversion params
-	txParam := tx_ver2.NewTxConvertVer1ToVer2InitParams(&(senderWallet.KeySet.PrivateKey), []*privacy.PaymentInfo{&uniquePayment}, utxoList,
+	txParam := tx_ver2.NewTxConvertVer1ToVer2InitParams(&(senderWallet.KeySet.PrivateKey), []*privacy.PaymentInfo{&uniquePayment}, coinV1List,
 		DefaultPRVFee, nil, nil, nil, nil)
 
 	tx := new(tx_ver2.Tx)

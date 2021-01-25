@@ -30,9 +30,9 @@ func CreateRawTokenTransaction(txParam *TxParam, version int8) ([]byte, string, 
 
 		return encodedTx, txHash, nil
 	} else if version == 2 {
-		return CreateRawTransactionVer2(txParam)
+		return CreateRawTokenTransactionVer2(txParam)
 	} else {
-		return CreateRawTransactionVer1(txParam)
+		return CreateRawTokenTransactionVer1(txParam)
 	}
 }
 
