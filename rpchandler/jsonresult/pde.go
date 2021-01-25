@@ -1,6 +1,24 @@
 package jsonresult
 
-import "github.com/thanhn-inc/debugtool/common"
+import (
+	"fmt"
+	"github.com/thanhn-inc/debugtool/common"
+	"sort"
+)
+
+// key prefix
+var (
+	// PDE
+	WaitingPDEContributionPrefix = []byte("waitingpdecontribution-")
+	PDEPoolPrefix                = []byte("pdepool-")
+	PDESharePrefix               = []byte("pdeshare-")
+	PDETradingFeePrefix          = []byte("pdetradingfee-")
+	PDETradeFeePrefix            = []byte("pdetradefee-")
+	PDEContributionStatusPrefix  = []byte("pdecontributionstatus-")
+	PDETradeStatusPrefix         = []byte("pdetradestatus-")
+	PDEWithdrawalStatusPrefix    = []byte("pdewithdrawalstatus-")
+	PDEFeeWithdrawalStatusPrefix = []byte("pdefeewithdrawalstatus-")
+)
 
 type CurrentPDEState struct {
 	WaitingPDEContributions map[string]*PDEContribution `json:"WaitingPDEContributions"`
@@ -22,4 +40,16 @@ type PDEContribution struct {
 	TokenIDStr            string
 	Amount                uint64
 	TxReqID               common.Hash
+}
+
+func BuildPDEPoolForPairKey(
+	beaconHeight uint64,
+	token1IDStr string,
+	token2IDStr string,
+) []byte {
+	beaconHeightBytes := []byte(fmt.Sprintf("%d-", beaconHeight))
+	pdePoolForPairByBCHeightPrefix := append(PDEPoolPrefix, beaconHeightBytes...)
+	tokenIDStrs := []string{token1IDStr, token2IDStr}
+	sort.Strings(tokenIDStrs)
+	return append(pdePoolForPairByBCHeightPrefix, []byte(tokenIDStrs[0]+"-"+tokenIDStrs[1])...)
 }
