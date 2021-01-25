@@ -498,8 +498,9 @@ func main() {
 
 		//TOKEN RPCs
 		if args[0] == "inittoken" {
-			if len(args) < 5 {
-				fmt.Println("need at least 5 arguments.")
+			if len(args) < 3 {
+				fmt.Println("need at least 3 arguments.")
+				continue
 			}
 
 			var privateKey string
@@ -585,6 +586,7 @@ func main() {
 		if args[0] == "transfertoken" {
 			if len(args) < 5 {
 				fmt.Println("need at least 5 arguments.")
+				continue
 			}
 
 			var privateKey string
@@ -870,9 +872,117 @@ func main() {
 				fmt.Println(err)
 				continue
 			}
-			b, _ := json.Marshal(currentState)
+			b, _ := json.MarshalIndent(currentState, "", "\t")
 			fmt.Printf("Beacon Height: %v, state:\n%v\n", bHeight, string(b))
 
+		}
+		if args[0] == "poolpairs" {
+			var bHeight uint64
+			var err error
+			if len(args) > 1{
+				tmpHeight, err := strconv.ParseInt(args[1], 10, 32)
+				if err != nil {
+					fmt.Println("cannot get beacon height", err)
+					continue
+				}
+
+				bHeight = uint64(tmpHeight)
+			} else { //Get the latest state
+				bestBlocks, err := debugtool.GetBestBlock()
+				if err != nil {
+					fmt.Println("cannot get best block", err)
+					continue
+				}
+
+				bHeight = bestBlocks[-1]
+			}
+
+			allPoolPairs, err := debugtool.GetAllPDEPoolPairs(bHeight)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			fmt.Printf("There are %v pool pairs.\n", len(allPoolPairs))
+			for _, value := range allPoolPairs {
+				fmt.Printf("%v - %v: %v - %v\n", value.Token1IDStr, value.Token2IDStr, value.Token1PoolValue, value.Token2PoolValue)
+			}
+
+		}
+		if args[0] == "pool" {
+			if len(args) < 3 {
+				fmt.Println("need at least 3 arguments")
+				continue
+			}
+
+			var tokenID1 = args[1]
+			if len(tokenID1) < 10 {
+				tokenID1 = tokenIDs[tokenID1]
+			}
+
+			var tokenID2 = args[2]
+			if len(tokenID2) < 10 {
+				tokenID2 = tokenIDs[tokenID2]
+			}
+
+			var bHeight uint64
+			var err error
+			if len(args) > 3{
+				tmpHeight, err := strconv.ParseInt(args[3], 10, 32)
+				if err != nil {
+					fmt.Println("cannot get beacon height", err)
+					continue
+				}
+
+				bHeight = uint64(tmpHeight)
+			} else { //Get the latest state
+				bestBlocks, err := debugtool.GetBestBlock()
+				if err != nil {
+					fmt.Println("cannot get best block", err)
+					continue
+				}
+
+				bHeight = bestBlocks[-1]
+			}
+
+			poolPair, err := debugtool.GetPDEPoolPair(bHeight, tokenID1, tokenID2)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			fmt.Printf("%v - %v: %v - %v\n", poolPair.Token1IDStr, poolPair.Token2IDStr, poolPair.Token1PoolValue, poolPair.Token2PoolValue)
+		}
+		if args[0] == "tradevalue" {
+			if len(args) < 4 {
+				fmt.Println("need at least 4 arguments")
+				continue
+			}
+
+			var tokenID1 = args[1]
+			if len(tokenID1) < 10 {
+				tokenID1 = tokenIDs[tokenID1]
+			}
+
+			var tokenID2 = args[2]
+			if len(tokenID2) < 10 {
+				tokenID2 = tokenIDs[tokenID2]
+			}
+
+			amount, err := strconv.ParseInt(args[3], 10, 64)
+			if err != nil {
+				fmt.Println("cannot parse amount", args[3])
+				continue
+			}
+
+			expectedTradeValue, err := debugtool.GetTradeValue(tokenID1, tokenID2, uint64(amount))
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			rate := float64(expectedTradeValue)/float64(amount)
+			fmt.Printf("Sell %v of token %v, get %v of token %v, rate %v, %v\n", amount, tokenID1, expectedTradeValue, tokenID2, rate, 1/rate)
 		}
 
 		//STAKING
