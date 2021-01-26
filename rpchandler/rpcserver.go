@@ -99,25 +99,25 @@ func (server *RPCServer) SendPostRequestWithQuery(query string) ([]byte, error) 
 		return body, nil
 	}
 }
-
-func (server *RPCServer) SendPostRequestWithQuery2(query string) ([]byte, error) {
-	if len(server.url) == 0 {
-		return []byte{}, errors.New("Debugtool has not set mainnet or testnet")
-	}
-	client := new(http.Client)
-
-	resp, err := client.Post(server.GetURL(), "application/json", bytes.NewBuffer([]byte(query)))
-	if err != nil {
-		return nil, err
-	}
-
-	respBody := resp.Body
-	defer respBody.Close()
-
-	body, err := ioutil.ReadAll(respBody)
-	if err != nil {
-		return nil, err
-	}
-
-	return body, nil
-}
+//
+//func (server *RPCServer) SendPostRequestWithQuery2(query string) ([]byte, error) {
+//	if len(server.url) == 0 {
+//		return []byte{}, errors.New("Debugtool has not set mainnet or testnet")
+//	}
+//	client := new(http.Client)
+//
+//	resp, err := client.Post(server.GetURL(), "application/json", bytes.NewBuffer([]byte(query)))
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	respBody := resp.Body
+//	defer respBody.Close()
+//
+//	body, err := ioutil.ReadAll(respBody)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	return body, nil
+//}

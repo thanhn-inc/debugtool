@@ -183,6 +183,22 @@ func GetTxByHash(txHash string) {
 	fmt.Println("========== END GET TX BY HASH ==========")
 }
 
+func Init() error {
+	rpchandler.Server = new(rpchandler.RPCServer).InitLocal("9334")
+	//rpchandler.Server = new(rpchandler.RPCServer).InitDevNet()
+	//rpchandler.Server = new(rpchandler.RPCServer).InitTestnet()
+
+	activeShards, err := debugtool.GetActiveShard()
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Init to: %v, number of active shards: %v\n", rpchandler.Server.GetURL(), activeShards)
+	common.MaxShardNumber = activeShards
+
+	return nil
+}
+
 //Comment the init function in blockchain/constants.go to run the debug tool.
 func main() {
 	privateKeys := []string{
@@ -207,9 +223,10 @@ func main() {
 	tokenIDs["BTC"] = "b832e5d3b1f01a4f0623f7fe91d6673461e1f5d37d91fe78c5c2e6183ff39696"
 	tokenIDs["PRV"] = common.PRVIDStr
 
-	rpchandler.Server = new(rpchandler.RPCServer).InitLocal("9334")
-	//rpchandler.Server = new(rpchandler.RPCServer).InitDevNet()
-	//rpchandler.Server = new(rpchandler.RPCServer).InitTestnet()
+	//rpchandler.Server = new(rpchandler.RPCServer).InitLocal("9334")
+	//rpchandler.EthServer = new(rpchandler.RPCServer).InitEthBridgeLocal("9334")
+	rpchandler.Server = new(rpchandler.RPCServer).InitMainnet()
+	rpchandler.EthServer = new(rpchandler.RPCServer).InitEthBridgeMainNet()
 
 	//tool := new(rpchandler.RPCServer).InitLocal("9334")
 	//tool := new(rpchandler.RPCServer).InitMainnet()
@@ -221,7 +238,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Printf("Init to: %v, number of active shards: %v\n", rpchandler.Server.GetURL(), activeShards)
+	fmt.Printf("Init to: %v, eth server: %v, number of active shards: %v\n", rpchandler.Server.GetURL(), rpchandler.EthServer.GetURL(), activeShards)
 	common.MaxShardNumber = activeShards
 
 	reader := bufio.NewReader(os.Stdin)
@@ -259,7 +276,9 @@ func main() {
 				panic(err)
 			}
 
-			fmt.Printf("Init to: %v, number of active shards: %v\n", rpchandler.Server.GetURL(), activeShards)
+			rpchandler.EthServer = new(rpchandler.RPCServer).InitEthBridgeTestNet()
+
+			fmt.Printf("Init to: %v, eth server: %v, number of active shards: %v\n", rpchandler.Server.GetURL(), rpchandler.EthServer.GetURL(), activeShards)
 			common.MaxShardNumber = activeShards
 		}
 		if args[0] == "initdevnet" {
@@ -269,7 +288,9 @@ func main() {
 				panic(err)
 			}
 
-			fmt.Printf("Init to: %v, number of active shards: %v\n", rpchandler.Server.GetURL(), activeShards)
+			rpchandler.EthServer = new(rpchandler.RPCServer).InitEthBridgeDevNet()
+
+			fmt.Printf("Init to: %v, eth server: %v, number of active shards: %v\n", rpchandler.Server.GetURL(), rpchandler.EthServer.GetURL(), activeShards)
 			common.MaxShardNumber = activeShards
 		}
 		if args[0] == "initmainnet" {
@@ -279,7 +300,9 @@ func main() {
 				panic(err)
 			}
 
-			fmt.Printf("Init to: %v, number of active shards: %v\n", rpchandler.Server.GetURL(), activeShards)
+			rpchandler.EthServer = new(rpchandler.RPCServer).InitEthBridgeMainNet()
+
+			fmt.Printf("Init to: %v, eth server: %v, number of active shards: %v\n", rpchandler.Server.GetURL(), rpchandler.EthServer.GetURL(), activeShards)
 			common.MaxShardNumber = activeShards
 		}
 		if args[0] == "initlocal" {
@@ -748,13 +771,52 @@ func main() {
 				tokenID = tokenIDs[args[2]]
 			}
 
-			amount, err := strconv.ParseInt(args[3], 10, 32)
+			amount, err := strconv.ParseInt(args[3], 10, 64)
 			if err != nil {
 				fmt.Println(err)
 				continue
 			}
 
 			txHash, err := debugtool.CreateAndSendPDETradeTransaction(privateKey, common.PRVIDStr, tokenID, uint64(amount))
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			fmt.Printf("CreateAndSendPDETradeTransaction succeeded. TxHash: %v.\n", txHash)
+		}
+		if args[0] == "pdetradetoken" {
+			if len(args) < 5 {
+				fmt.Println("Not enough param for pdetradetoken")
+				continue
+			}
+
+			privateKey := args[1]
+			if len(args[1]) < 3 {
+				index, err := strconv.ParseInt(args[1], 10, 32)
+				if err != nil {
+					panic(err)
+				}
+				privateKey = privateKeys[index]
+			}
+
+			tokenIDToSell := args[2]
+			if len(args[2]) < 10 {
+				tokenIDToSell = tokenIDs[args[2]]
+			}
+
+			tokenIDToBuy := args[3]
+			if len(args[3]) < 10 {
+				tokenIDToBuy = tokenIDs[args[3]]
+			}
+
+			amount, err := strconv.ParseInt(args[4], 10, 64)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			txHash, err := debugtool.CreateAndSendPDETradeTransaction(privateKey, tokenIDToSell, tokenIDToBuy, uint64(amount))
 			if err != nil {
 				fmt.Println(err)
 				continue
@@ -947,8 +1009,27 @@ func main() {
 
 			poolPair, err := debugtool.GetPDEPoolPair(bHeight, tokenID1, tokenID2)
 			if err != nil {
-				fmt.Println(err)
-				continue
+				if tokenID1 != common.PRVIDStr && tokenID2 != common.PRVIDStr {
+					poolPair1, err := debugtool.GetPDEPoolPair(bHeight, tokenID1, common.PRVIDStr)
+					if err != nil {
+						fmt.Println(err)
+						continue
+					}
+					poolPair2, err := debugtool.GetPDEPoolPair(bHeight, common.PRVIDStr, tokenID2)
+					if err != nil {
+						fmt.Println(err)
+						continue
+					}
+
+					fmt.Println("Cross pool found:")
+					fmt.Printf("Pool 1: %v - %v: %v - %v\n", poolPair1.Token1IDStr, poolPair1.Token2IDStr, poolPair1.Token1PoolValue, poolPair1.Token2PoolValue)
+					fmt.Printf("Pool 2: %v - %v: %v - %v\n", poolPair2.Token1IDStr, poolPair2.Token2IDStr, poolPair2.Token1PoolValue, poolPair2.Token2PoolValue)
+					continue
+				} else {
+					fmt.Println(err)
+					continue
+				}
+
 			}
 
 			fmt.Printf("%v - %v: %v - %v\n", poolPair.Token1IDStr, poolPair.Token2IDStr, poolPair.Token1PoolValue, poolPair.Token2PoolValue)
@@ -977,8 +1058,22 @@ func main() {
 
 			expectedTradeValue, err := debugtool.GetTradeValue(tokenID1, tokenID2, uint64(amount))
 			if err != nil {
-				fmt.Println(err)
-				continue
+				if tokenID1 != common.PRVIDStr && tokenID2 != common.PRVIDStr {
+					//firstly, trade to PRV
+					expectedPRV, err := debugtool.GetTradeValue(tokenID1, common.PRVIDStr, uint64(amount))
+					if err != nil {
+						fmt.Println(err)
+						continue
+					}
+					expectedTradeValue, err = debugtool.GetTradeValue(common.PRVIDStr, tokenID2, expectedPRV)
+					if err != nil {
+						fmt.Println(err)
+						continue
+					}
+				} else {
+					fmt.Println(err)
+					continue
+				}
 			}
 
 			rate := float64(expectedTradeValue)/float64(amount)
@@ -1094,6 +1189,26 @@ func main() {
 				continue
 			}
 			fmt.Println(string(b))
+		}
+
+		//BRIDGE
+		if args[0] == "ethhash" {
+			if len(args) < 2 {
+				fmt.Println("not enough arguments for ethhash")
+			}
+			txHash := args[1]
+			var url = ""
+			if len(args) > 2 {
+				url = args[2]
+			}
+
+			b, err := debugtool.GetETHTxByHash(url, txHash)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			fmt.Println(b)
 		}
 
 		//GENERAL

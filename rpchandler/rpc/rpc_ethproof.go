@@ -10,10 +10,6 @@ type Receipt struct {
 	Result *types.Receipt `json:"result"`
 }
 
-type NormalResult struct {
-	Result interface{} `json:"result"`
-}
-
 func GetETHTransactionByHash(
 	url string,
 	tx string,
@@ -31,7 +27,7 @@ func GetETHTransactionByHash(
 		return nil, err
 	}
 
-	return rpchandler.EthServer.SendPostRequestWithQuery2(string(query))
+	return rpchandler.EthServer.SendPostRequestWithQuery(string(query))
 }
 
 func GetETHBlockByHash(
