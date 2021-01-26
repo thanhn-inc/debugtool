@@ -19,12 +19,28 @@ func CreatePDETradeTransaction(privateKey, tokenIDToSell, tokenIDToBuy string, a
 	}
 
 	addr := senderWallet.Base58CheckSerialize(wallet.PaymentAddressType)
-	pdeTradeMetadata, err := metadata.NewPDETradeRequest(tokenIDToBuy, tokenIDToSell, amount, 0, 0,
-		addr, "", metadata.PDETradeRequestMeta)
 
-	txParam := NewTxParam(privateKey, []string{common.BurningAddress2}, []uint64{amount}, common.PRVIDStr, 0, pdeTradeMetadata)
+	var pdeTradeMetadata *metadata.PDETradeRequest
+	if tokenIDToSell == common.PRVIDStr || tokenIDToBuy == common.PRVIDStr {
+		pdeTradeMetadata, err = metadata.NewPDETradeRequest(tokenIDToBuy, tokenIDToSell, amount, 0, 0,
+			addr, "", metadata.PDETradeRequestMeta)
+	} else {
+		pdeTradeMetadata, err = metadata.NewPDETradeRequest(tokenIDToBuy, tokenIDToSell, amount, 0, 0,
+			addr, "", metadata.PDECrossPoolTradeRequestMeta)
+	}
 
-	return CreateRawTransaction(txParam, -1)
+	if err != nil {
+		return nil, "", errors.New(fmt.Sprintf("cannot init trade request for %v to %v with amount %v: %v", tokenIDToSell, tokenIDToBuy, amount, err))
+	}
+
+	txParam := NewTxParam(privateKey, []string{common.BurningAddress2}, []uint64{amount}, tokenIDToSell, 1, pdeTradeMetadata)
+
+	if tokenIDToSell == common.PRVIDStr {
+		return CreateRawTransaction(txParam, -1)
+	} else {
+		return CreateRawTokenTransaction(txParam, -1)
+	}
+
 }
 func CreateAndSendPDETradeTransaction(privateKey, tokenIDToSell, tokenIDToBuy string, amount uint64) (string, error) {
 	encodedTx, txHash, err := CreatePDETradeTransaction(privateKey, tokenIDToSell, tokenIDToBuy, amount)
@@ -32,10 +48,19 @@ func CreateAndSendPDETradeTransaction(privateKey, tokenIDToSell, tokenIDToBuy st
 		return "", err
 	}
 
-	responseInBytes, err := rpc.SendRawTx(string(encodedTx))
-	if err != nil {
-		return "", err
+	var responseInBytes []byte
+	if tokenIDToSell == common.PRVIDStr {
+		responseInBytes, err = rpc.SendRawTx(string(encodedTx))
+		if err != nil {
+			return "", err
+		}
+	} else {
+		responseInBytes, err = rpc.SendRawTokenTx(string(encodedTx))
+		if err != nil {
+			return "", err
+		}
 	}
+
 
 	_, err = rpchandler.ParseResponse(responseInBytes)
 	if err != nil {
