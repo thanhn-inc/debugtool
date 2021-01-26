@@ -3,7 +3,6 @@ package rpc
 import (
 	"encoding/json"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/thanhn-inc/debugtool/common"
 	"github.com/thanhn-inc/debugtool/rpchandler"
 )
 
@@ -17,14 +16,14 @@ type NormalResult struct {
 
 func GetETHTransactionByHash(
 	url string,
-	tx common.Hash,
+	tx string,
 ) ([]byte, error) {
 	if len(url) != 0 {
 		rpchandler.EthServer.InitToURL(url)
 	}
 
 	method := "eth_getTransactionByHash"
-	params := []interface{}{tx.String()}
+	params := []interface{}{tx}
 
 	request := rpchandler.CreateJsonRequest("2.0", method, params, 1)
 	query, err := json.Marshal(request)
@@ -55,13 +54,13 @@ func GetETHBlockByHash(
 	return rpchandler.EthServer.SendPostRequestWithQuery(string(query))
 }
 
-func GetETHTransactionReceipt(url string, txHash common.Hash) ([]byte, error) {
+func GetETHTransactionReceipt(url string, txHash string) ([]byte, error) {
 	if len(url) != 0 {
 		rpchandler.EthServer.InitToURL(url)
 	}
 
 	method := "eth_getTransactionReceipt"
-	params := []interface{}{txHash.String()}
+	params := []interface{}{txHash}
 
 	request := rpchandler.CreateJsonRequest("2.0", method, params, 1)
 	query, err := json.Marshal(request)
