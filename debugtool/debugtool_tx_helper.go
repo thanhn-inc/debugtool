@@ -83,7 +83,7 @@ func ChooseBestCoinsByAmount(coinList []privacy.PlainCoin, requiredAmount uint64
 	//TODO: find a better solution for this.
 	for i := 0; i < len(coinList)-1; i++ {
 		if coinList[i].GetValue() > remainAmount {
-			if coinList[i+1].GetValue() > remainAmount {
+			if coinList[i+1].GetValue() >= remainAmount {
 				continue
 			} else {
 				coinsToSpend = append(coinsToSpend, coinList[i])
