@@ -47,6 +47,46 @@ func (server *RPCServer) InitDevNet() *RPCServer {
 	return server
 }
 
+func (server *RPCServer) InitToURL(url string) *RPCServer {
+	if server == nil {
+		server = new(RPCServer)
+	}
+	server.url = url
+	return server
+}
+
+func (server *RPCServer) InitEthBridgeMainnet() *RPCServer {
+	if server == nil {
+		server = new(RPCServer)
+	}
+	server.url = "https://kovan.infura.io/v3/93fe721349134964aa71071a713c5cef"
+	return server
+}
+
+func (server *RPCServer) InitEthBridgeTestnet() *RPCServer {
+	if server == nil {
+		server = new(RPCServer)
+	}
+	server.url = "https://kovan.infura.io/v3/93fe721349134964aa71071a713c5cef"
+	return server
+}
+
+func (server *RPCServer) InitEthBridgeLocal(port string) *RPCServer {
+	if server == nil {
+		server = new(RPCServer)
+	}
+	server.url = "http://127.0.0.1:" + port
+	return server
+}
+
+func (server *RPCServer) InitEthBridgeDevNet() *RPCServer {
+	if server == nil {
+		server = new(RPCServer)
+	}
+	server.url = "https://kovan.infura.io/v3/93fe721349134964aa71071a713c5cef"
+	return server
+}
+
 func (server *RPCServer) SendPostRequestWithQuery(query string) ([]byte, error) {
 	if len(server.url) == 0 {
 		return []byte{}, errors.New("Debugtool has not set mainnet or testnet")

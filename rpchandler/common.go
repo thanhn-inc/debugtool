@@ -38,6 +38,7 @@ type JsonResponse struct {
 }
 
 var Server = new(RPCServer).InitTestnet()
+var EthServer = new(RPCServer).InitTestnet()
 
 func EncodeBase58Check(data []byte) string {
 	b := base58.Base58Check{}.Encode(data, 0)
