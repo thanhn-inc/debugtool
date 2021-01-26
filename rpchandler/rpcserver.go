@@ -55,27 +55,19 @@ func (server *RPCServer) InitToURL(url string) *RPCServer {
 	return server
 }
 
-func (server *RPCServer) InitEthBridgeMainnet() *RPCServer {
+func (server *RPCServer) InitEthBridgeMainNet() *RPCServer {
+	if server == nil {
+		server = new(RPCServer)
+	}
+	server.url = "https://mainnet.infura.io/v3/34918000975d4374a056ed78fe21c517"
+	return server
+}
+
+func (server *RPCServer) InitEthBridgeTestNet() *RPCServer {
 	if server == nil {
 		server = new(RPCServer)
 	}
 	server.url = "https://kovan.infura.io/v3/93fe721349134964aa71071a713c5cef"
-	return server
-}
-
-func (server *RPCServer) InitEthBridgeTestnet() *RPCServer {
-	if server == nil {
-		server = new(RPCServer)
-	}
-	server.url = "https://kovan.infura.io/v3/93fe721349134964aa71071a713c5cef"
-	return server
-}
-
-func (server *RPCServer) InitEthBridgeLocal(port string) *RPCServer {
-	if server == nil {
-		server = new(RPCServer)
-	}
-	server.url = "http://127.0.0.1:" + port
 	return server
 }
 
@@ -106,4 +98,26 @@ func (server *RPCServer) SendPostRequestWithQuery(query string) ([]byte, error) 
 		}
 		return body, nil
 	}
+}
+
+func (server *RPCServer) SendPostRequestWithQuery2(query string) ([]byte, error) {
+	if len(server.url) == 0 {
+		return []byte{}, errors.New("Debugtool has not set mainnet or testnet")
+	}
+	client := new(http.Client)
+
+	resp, err := client.Post(server.GetURL(), "application/json", bytes.NewBuffer([]byte(query)))
+	if err != nil {
+		return nil, err
+	}
+
+	respBody := resp.Body
+	defer respBody.Close()
+
+	body, err := ioutil.ReadAll(respBody)
+	if err != nil {
+		return nil, err
+	}
+
+	return body, nil
 }

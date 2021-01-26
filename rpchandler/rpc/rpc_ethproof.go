@@ -31,7 +31,7 @@ func GetETHTransactionByHash(
 		return nil, err
 	}
 
-	return rpchandler.EthServer.SendPostRequestWithQuery(string(query))
+	return rpchandler.EthServer.SendPostRequestWithQuery2(string(query))
 }
 
 func GetETHBlockByHash(
