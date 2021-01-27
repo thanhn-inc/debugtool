@@ -3,6 +3,7 @@ package rpchandler
 import (
 	"bytes"
 	"errors"
+	"github.com/thanhn-inc/debugtool/common"
 	"io/ioutil"
 	"net/http"
 )
@@ -15,67 +16,11 @@ func (server *RPCServer) GetURL() string {
 	return server.url
 }
 
-func (server *RPCServer) InitMainnet() *RPCServer {
-	if server == nil {
-		server = new(RPCServer)
-	}
-	server.url = "https://mainnet.incognito.org/fullnode"
-	return server
-}
-
-func (server *RPCServer) InitTestnet() *RPCServer {
-	if server == nil {
-		server = new(RPCServer)
-	}
-	server.url = "http://51.83.36.184:20002"
-	return server
-}
-
-func (server *RPCServer) InitLocal(port string) *RPCServer {
-	if server == nil {
-		server = new(RPCServer)
-	}
-	server.url = "http://127.0.0.1:" + port
-	return server
-}
-
-func (server *RPCServer) InitDevNet() *RPCServer {
-	if server == nil {
-		server = new(RPCServer)
-	}
-	server.url = "http://139.162.55.124:8334"
-	return server
-}
-
 func (server *RPCServer) InitToURL(url string) *RPCServer {
 	if server == nil {
 		server = new(RPCServer)
 	}
 	server.url = url
-	return server
-}
-
-func (server *RPCServer) InitEthBridgeMainNet() *RPCServer {
-	if server == nil {
-		server = new(RPCServer)
-	}
-	server.url = "https://mainnet.infura.io/v3/34918000975d4374a056ed78fe21c517"
-	return server
-}
-
-func (server *RPCServer) InitEthBridgeTestNet() *RPCServer {
-	if server == nil {
-		server = new(RPCServer)
-	}
-	server.url = "https://kovan.infura.io/v3/93fe721349134964aa71071a713c5cef"
-	return server
-}
-
-func (server *RPCServer) InitEthBridgeDevNet() *RPCServer {
-	if server == nil {
-		server = new(RPCServer)
-	}
-	server.url = "https://kovan.infura.io/v3/93fe721349134964aa71071a713c5cef"
 	return server
 }
 
@@ -99,25 +44,42 @@ func (server *RPCServer) SendPostRequestWithQuery(query string) ([]byte, error) 
 		return body, nil
 	}
 }
-//
-//func (server *RPCServer) SendPostRequestWithQuery2(query string) ([]byte, error) {
-//	if len(server.url) == 0 {
-//		return []byte{}, errors.New("Debugtool has not set mainnet or testnet")
-//	}
-//	client := new(http.Client)
-//
-//	resp, err := client.Post(server.GetURL(), "application/json", bytes.NewBuffer([]byte(query)))
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	respBody := resp.Body
-//	defer respBody.Close()
-//
-//	body, err := ioutil.ReadAll(respBody)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	return body, nil
-//}
+
+func InitMainNet() {
+	Server.url = "https://mainnet.incognito.org/fullnode"
+	EthServer.url = "https://mainnet.infura.io/v3/34918000975d4374a056ed78fe21c517"
+	common.EthContractAddressStr = common.MainETHContractAddressStr
+	return
+}
+
+func InitTestNet() {
+	if Server == nil {
+		Server = new(RPCServer)
+	}
+	Server.url = "http://51.83.36.184:20002"
+	EthServer.url = "https://kovan.infura.io/v3/93fe721349134964aa71071a713c5cef"
+	common.EthContractAddressStr = common.TestnetETHContractAddressStr
+}
+
+func InitLocal(port string) {
+	if Server == nil {
+		Server = new(RPCServer)
+	}
+	if EthServer == nil {
+		EthServer = new(RPCServer)
+	}
+	Server.url = "http://127.0.0.1:" + port
+}
+
+func InitDevNet() {
+	if Server == nil {
+		Server = new(RPCServer)
+	}
+	if EthServer == nil {
+		EthServer = new(RPCServer)
+	}
+
+	Server.url = "http://139.162.55.124:8334"
+	EthServer.url = "https://kovan.infura.io/v3/93fe721349134964aa71071a713c5cef"
+	common.EthContractAddressStr = common.TestnetETHContractAddressStr
+}

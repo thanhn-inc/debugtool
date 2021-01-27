@@ -37,8 +37,8 @@ type JsonResponse struct {
 	Jsonrpc string               `json:"Jsonrpc"`
 }
 
-var Server = new(RPCServer).InitTestnet()
-var EthServer = new(RPCServer).InitTestnet()
+var Server = new(RPCServer)
+var EthServer = new(RPCServer)
 
 func EncodeBase58Check(data []byte) string {
 	b := base58.Base58Check{}.Encode(data, 0)
