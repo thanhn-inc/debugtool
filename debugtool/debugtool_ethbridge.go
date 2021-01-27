@@ -6,31 +6,34 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	rCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/light"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
+	"github.com/thanhn-inc/debugtool/common"
+	"github.com/thanhn-inc/debugtool/metadata"
 	"github.com/thanhn-inc/debugtool/rpchandler"
 	"github.com/thanhn-inc/debugtool/rpchandler/rpc"
 	"strconv"
 )
 
 type ETHDepositProof struct {
-	blockNumber uint64
-	blockHash string
-	txIdx uint64
+	blockNumber uint
+	blockHash rCommon.Hash
+	txIdx uint
 	nodeList []string
 }
 
-func (E ETHDepositProof) TxIdx() uint64 {
+func (E ETHDepositProof) TxIdx() uint {
 	return E.txIdx
 }
 
-func (E ETHDepositProof) BlockNumber() uint64 {
+func (E ETHDepositProof) BlockNumber() uint {
 	return E.blockNumber
 }
 
-func (E ETHDepositProof) BlockHash() string {
+func (E ETHDepositProof) BlockHash() rCommon.Hash {
 	return E.blockHash
 }
 
@@ -38,7 +41,7 @@ func (E ETHDepositProof) NodeList() []string {
 	return E.nodeList
 }
 
-func NewETHDepositProof(blockNumber uint64, blockHash string, txIdx uint64, nodeList []string) *ETHDepositProof {
+func NewETHDepositProof(blockNumber uint, blockHash rCommon.Hash, txIdx uint, nodeList []string) *ETHDepositProof {
 	proof := ETHDepositProof{
 		blockNumber: blockNumber,
 		blockHash:   blockHash,
@@ -100,7 +103,6 @@ func GetETHTxReceipt(url string, txHash string) (*types.Receipt, error) {
 	return &res, nil
 }
 
-
 func GetETHDepositProof(url string, txHash string) (*ETHDepositProof, error) {
 	// Get tx content
 	txContent, err := GetETHTxByHash(url, txHash)
@@ -113,10 +115,11 @@ func GetETHDepositProof(url string, txHash string) (*ETHDepositProof, error) {
 	if !ok {
 		return nil, errors.New(fmt.Sprintf("cannot find blockHash in %v", txContent))
 	}
-	blockHash, ok := txContent["blockHash"].(string)
+	blockHashStr, ok := txContent["blockHash"].(string)
 	if !ok {
 		return nil, errors.New(fmt.Sprintf("cannot parse blockHash in %v", txContent))
 	}
+	blockHash := rCommon.HexToHash(blockHashStr)
 
 	_, ok = txContent["transactionIndex"]
 	if !ok {
@@ -146,7 +149,7 @@ func GetETHDepositProof(url string, txHash string) (*ETHDepositProof, error) {
 		return nil, errors.New("cannot convert blockNumber into integer")
 	}
 
-	blockHeader, err := GetETHBlockByHash(url, blockHash)
+	blockHeader, err := GetETHBlockByHash(url, blockHashStr)
 	if err != nil {
 		return nil, err
 	}
@@ -200,5 +203,42 @@ func GetETHDepositProof(url string, txHash string) (*ETHDepositProof, error) {
 		encNodeList = append(encNodeList, str)
 	}
 
-	return NewETHDepositProof(uint64(blockNumber), blockHash, txIndex, encNodeList), nil
+	return NewETHDepositProof(uint(blockNumber), blockHash, uint(txIndex), encNodeList), nil
+}
+
+func CreateIssuingETHRequestTransaction(privateKey string, proof *ETHDepositProof, tokenIDStr string, amount uint64) ([]byte, string, error) {
+	tokenID, err := new(common.Hash).NewHashFromStr(tokenIDStr)
+	if err != nil {
+		return nil, "", err
+	}
+
+	var issuingETHRequestMeta *metadata.IssuingETHRequest
+	issuingETHRequestMeta, err = metadata.NewIssuingETHRequest(proof.BlockHash(), proof.TxIdx(), proof.NodeList(), *tokenID, metadata.IssuingETHRequestMeta)
+	if err != nil {
+		return nil, "", errors.New(fmt.Sprintf("cannot init issue eth request for %v, tokenID %v with amount %v: %v", *proof, tokenIDStr, amount, err))
+	}
+
+	txParam := NewTxParam(privateKey, []string{common.BurningAddress2}, []uint64{0}, tokenIDStr, 1, issuingETHRequestMeta)
+
+
+	return CreateRawTokenTransaction(txParam, -1)
+}
+
+func CreateAndSendIssuingETHRequestTransaction(privateKey string, proof *ETHDepositProof, tokenIDStr string, amount uint64) (string, error) {
+	encodedTx, txHash, err := CreateIssuingETHRequestTransaction(privateKey, proof, tokenIDStr, amount)
+	if err != nil {
+		return "", err
+	}
+
+	responseInBytes, err := rpc.SendRawTokenTx(string(encodedTx))
+	if err != nil {
+		return "", err
+	}
+
+	_, err = rpchandler.ParseResponse(responseInBytes)
+	if err != nil {
+		return "", err
+	}
+
+	return txHash, nil
 }

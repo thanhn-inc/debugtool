@@ -38,7 +38,6 @@ type IssuingETHAcceptedInst struct {
 	ExternalTokenID []byte      `json:"externalTokenId"`
 }
 
-
 func ParseETHIssuingInstContent(instContentStr string) (*IssuingETHReqAction, error) {
 	contentBytes, err := base64.StdEncoding.DecodeString(instContentStr)
 	if err != nil {
