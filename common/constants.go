@@ -62,11 +62,11 @@ var (
 
 // special token ids (aka. PropertyID in custom token)
 var (
-	PRVCoinID   = Hash{4} // To send PRV in custom token
-	PRVCoinName = "PRV"   // To send PRV in custom token
-	ConfidentialAssetID = Hash{5}
+	PRVCoinID             = Hash{4} // To send PRV in custom token
+	PRVCoinName           = "PRV"   // To send PRV in custom token
+	ConfidentialAssetID   = Hash{5}
 	ConfidentialAssetName = "CA"
-	MaxShardNumber = 8       //programmatically config based on networkID
+	MaxShardNumber        = 8 //programmatically config based on networkID
 )
 
 // CONSENSUS
@@ -76,14 +76,14 @@ const (
 	// NodeModeAuto   = "auto"
 	// NodeModeBeacon = "beacon"
 
-	BeaconRole     = "beacon"
-	ShardRole      = "shard"
-	CommitteeRole  = "committee"
-	ProposerRole   = "proposer"
-	ValidatorRole  = "validator"
-	PendingRole    = "pending"
-	SyncingRole    = "syncing" //this is for shard case - when beacon tell it is committee, but its state not
-	WaitingRole    = "waiting"
+	BeaconRole    = "beacon"
+	ShardRole     = "shard"
+	CommitteeRole = "committee"
+	ProposerRole  = "proposer"
+	ValidatorRole = "validator"
+	PendingRole   = "pending"
+	SyncingRole   = "syncing" //this is for shard case - when beacon tell it is committee, but its state not
+	WaitingRole   = "waiting"
 
 	BlsConsensus    = "bls"
 	BridgeConsensus = "dsa"
@@ -332,5 +332,13 @@ const (
 var (
 	EmptyRoot = HexToHash(HexEmptyRoot)
 )
+
+const (
+	TestnetETHContractAddressStr  = "0xE0D5e7217c6C4bc475404b26d763fAD3F14D2b86"
+	Testnet2ETHContractAddressStr = "0x7c7e371D1e25771f2242833C1A354dCE846f3ec8"
+	MainETHContractAddressStr     = "0x97875355eF55Ae35613029df8B1C8Cf8f89c9066"
+)
+
+var EthContractAddressStr = MainETHContractAddressStr
 
 var TIMESLOT = uint64(0) //need to be set when init chain
