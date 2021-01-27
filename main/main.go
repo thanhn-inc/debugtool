@@ -18,7 +18,7 @@ import (
 )
 //Misc
 func SwitchPort(newPort string) {
-	rpchandler.Server = new(rpchandler.RPCServer).InitLocal(newPort)
+	rpchandler.Server = new(rpchandler.RPCServer).InitToURL(fmt.Sprintf("http://127.0.0.1:%v", newPort))
 }
 func GetShardIDFromPrivateKey(privateKey string) byte {
 	pubkey := privateKeyToPublicKey(privateKey)
@@ -184,7 +184,7 @@ func GetTxByHash(txHash string) {
 }
 
 func Init() error {
-	rpchandler.Server = new(rpchandler.RPCServer).InitLocal("9334")
+	rpchandler.InitLocal("9334")
 	//rpchandler.Server = new(rpchandler.RPCServer).InitDevNet()
 	//rpchandler.Server = new(rpchandler.RPCServer).InitTestnet()
 
@@ -223,10 +223,7 @@ func main() {
 	tokenIDs["BTC"] = "b832e5d3b1f01a4f0623f7fe91d6673461e1f5d37d91fe78c5c2e6183ff39696"
 	tokenIDs["PRV"] = common.PRVIDStr
 
-	//rpchandler.Server = new(rpchandler.RPCServer).InitLocal("9334")
-	//rpchandler.EthServer = new(rpchandler.RPCServer).InitEthBridgeLocal("9334")
-	rpchandler.Server = new(rpchandler.RPCServer).InitMainnet()
-	rpchandler.EthServer = new(rpchandler.RPCServer).InitEthBridgeMainNet()
+	rpchandler.InitMainNet()
 
 	//tool := new(rpchandler.RPCServer).InitLocal("9334")
 	//tool := new(rpchandler.RPCServer).InitMainnet()
@@ -270,43 +267,37 @@ func main() {
 			common.MaxShardNumber = activeShards
 		}
 		if args[0] == "inittestnet" {
-			rpchandler.Server = new(rpchandler.RPCServer).InitTestnet()
+			rpchandler.InitTestNet()
 			activeShards, err := debugtool.GetActiveShard()
 			if err != nil {
 				panic(err)
 			}
-
-			rpchandler.EthServer = new(rpchandler.RPCServer).InitEthBridgeTestNet()
 
 			fmt.Printf("Init to: %v, eth server: %v, number of active shards: %v\n", rpchandler.Server.GetURL(), rpchandler.EthServer.GetURL(), activeShards)
 			common.MaxShardNumber = activeShards
 		}
 		if args[0] == "initdevnet" {
-			rpchandler.Server = new(rpchandler.RPCServer).InitDevNet()
+			rpchandler.InitDevNet()
 			activeShards, err := debugtool.GetActiveShard()
 			if err != nil {
 				panic(err)
 			}
-
-			rpchandler.EthServer = new(rpchandler.RPCServer).InitEthBridgeDevNet()
 
 			fmt.Printf("Init to: %v, eth server: %v, number of active shards: %v\n", rpchandler.Server.GetURL(), rpchandler.EthServer.GetURL(), activeShards)
 			common.MaxShardNumber = activeShards
 		}
 		if args[0] == "initmainnet" {
-			rpchandler.Server = new(rpchandler.RPCServer).InitMainnet()
+			rpchandler.InitMainNet()
 			activeShards, err := debugtool.GetActiveShard()
 			if err != nil {
 				panic(err)
 			}
 
-			rpchandler.EthServer = new(rpchandler.RPCServer).InitEthBridgeMainNet()
-
 			fmt.Printf("Init to: %v, eth server: %v, number of active shards: %v\n", rpchandler.Server.GetURL(), rpchandler.EthServer.GetURL(), activeShards)
 			common.MaxShardNumber = activeShards
 		}
 		if args[0] == "initlocal" {
-			rpchandler.Server = new(rpchandler.RPCServer).InitLocal(args[1])
+			rpchandler.InitLocal(args[1])
 			activeShards, err := debugtool.GetActiveShard()
 			if err != nil {
 				panic(err)
@@ -1209,6 +1200,42 @@ func main() {
 			}
 
 			fmt.Println(b)
+		}
+		if args[0] == "ethblock" {
+			if len(args) < 2 {
+				fmt.Println("not enough arguments for ethblock")
+			}
+			txHash := args[1]
+			var url = ""
+			if len(args) > 2 {
+				url = args[2]
+			}
+
+			b, err := debugtool.GetETHBlockByHash(url, txHash)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			fmt.Println(b)
+		}
+		if args[0] == "ethreceipt" {
+			if len(args) < 2 {
+				fmt.Println("not enough arguments for ethreceipt")
+			}
+			txHash := args[1]
+			var url = ""
+			if len(args) > 2 {
+				url = args[2]
+			}
+
+			b, err := debugtool.GetETHTxReceipt(url, txHash)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			fmt.Println(b.BlockHash, b.BlockNumber, b.TxHash)
 		}
 
 		//GENERAL
