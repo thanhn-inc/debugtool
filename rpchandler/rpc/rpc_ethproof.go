@@ -2,13 +2,8 @@ package rpc
 
 import (
 	"encoding/json"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/thanhn-inc/debugtool/rpchandler"
 )
-
-type Receipt struct {
-	Result *types.Receipt `json:"result"`
-}
 
 func GetETHTransactionByHash(
 	url string,
