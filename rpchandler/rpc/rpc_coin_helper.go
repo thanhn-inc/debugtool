@@ -9,6 +9,18 @@ type OutCoinKey struct {
 	readonlyKey    string
 }
 
+func (outCoinKey OutCoinKey) PaymentAddress() string {
+	return outCoinKey.paymentAddress
+}
+
+func (outCoinKey OutCoinKey) OtaKey() string {
+	return outCoinKey.otaKey
+}
+
+func (outCoinKey OutCoinKey) ReadonlyKey() string {
+	return outCoinKey.readonlyKey
+}
+
 func (outCoinKey *OutCoinKey) SetOTAKey(otaKey string) {
 	outCoinKey.otaKey = otaKey
 }
