@@ -20,8 +20,8 @@ type TransactionDetail struct {
 	Image       string `json:"Image"`
 
 	IsPrivacy       bool          `json:"IsPrivacy"`
-	Proof           privacy.Proof `json:"Proof"`
-	ProofDetail     ProofDetail   `json:"ProofDetail"`
+	//Proof           privacy.Proof `json:"Proof"`
+	//ProofDetail     ProofDetail   `json:"ProofDetail"`
 	InputCoinPubKey string        `json:"InputCoinPubKey"`
 	SigPubKey       string        `json:"SigPubKey,omitempty"` // 64 bytes
 	Sig             string        `json:"Sig,omitempty"`       // 64 bytes
@@ -32,7 +32,7 @@ type TransactionDetail struct {
 	PrivacyCustomTokenName        string      `json:"PrivacyCustomTokenName"`
 	PrivacyCustomTokenSymbol      string      `json:"PrivacyCustomTokenSymbol"`
 	PrivacyCustomTokenData        string      `json:"PrivacyCustomTokenData"`
-	PrivacyCustomTokenProofDetail ProofDetail `json:"PrivacyCustomTokenProofDetail"`
+	//PrivacyCustomTokenProofDetail ProofDetail `json:"PrivacyCustomTokenProofDetail"`
 	PrivacyCustomTokenIsPrivacy   bool        `json:"PrivacyCustomTokenIsPrivacy"`
 	PrivacyCustomTokenFee         uint64      `json:"PrivacyCustomTokenFee"`
 
