@@ -206,7 +206,12 @@ func GetETHDepositProof(url string, txHash string) (*ETHDepositProof, error) {
 	return NewETHDepositProof(uint(blockNumber), blockHash, uint(txIndex), encNodeList), nil
 }
 
-func CreateIssuingETHRequestTransaction(privateKey string, proof *ETHDepositProof, tokenIDStr string, amount uint64) ([]byte, string, error) {
+func CreateIssuingETHRequestTransaction(privateKey string, ethTxHash string, tokenIDStr string, amount uint64) ([]byte, string, error) {
+	proof, err := GetETHDepositProof("", ethTxHash)
+	if err != nil {
+		return nil, "", err
+	}
+
 	tokenID, err := new(common.Hash).NewHashFromStr(tokenIDStr)
 	if err != nil {
 		return nil, "", err
@@ -224,8 +229,8 @@ func CreateIssuingETHRequestTransaction(privateKey string, proof *ETHDepositProo
 	return CreateRawTokenTransaction(txParam, -1)
 }
 
-func CreateAndSendIssuingETHRequestTransaction(privateKey string, proof *ETHDepositProof, tokenIDStr string, amount uint64) (string, error) {
-	encodedTx, txHash, err := CreateIssuingETHRequestTransaction(privateKey, proof, tokenIDStr, amount)
+func CreateAndSendIssuingETHRequestTransaction(privateKey string, ethTxHash string, tokenIDStr string, amount uint64) (string, error) {
+	encodedTx, txHash, err := CreateIssuingETHRequestTransaction(privateKey, ethTxHash, tokenIDStr, amount)
 	if err != nil {
 		return "", err
 	}
