@@ -7,6 +7,7 @@ import (
 	"github.com/thanhn-inc/debugtool/common"
 	"github.com/thanhn-inc/debugtool/common/base58"
 	"github.com/thanhn-inc/debugtool/debugtool"
+	"github.com/thanhn-inc/debugtool/incognitokey"
 	"github.com/thanhn-inc/debugtool/privacy"
 	"github.com/thanhn-inc/debugtool/rpchandler"
 	"github.com/thanhn-inc/debugtool/rpchandler/rpc"
@@ -16,39 +17,17 @@ import (
 	"strconv"
 	"strings"
 )
+
 //Misc
 func SwitchPort(newPort string) {
 	rpchandler.Server = new(rpchandler.RPCServer).InitToURL(fmt.Sprintf("http://127.0.0.1:%v", newPort))
 }
 func GetShardIDFromPrivateKey(privateKey string) byte {
-	pubkey := privateKeyToPublicKey(privateKey)
+	pubkey := debugtool.PrivateKeyToPublicKey(privateKey)
 	return common.GetShardIDFromLastByte(pubkey[len(pubkey)-1])
 }
 
-//Keys
-func privateKeyToPaymentAddress(privkey string, keyType int) string {
-	keyWallet, _ := wallet.Base58CheckDeserialize(privkey)
-	keyWallet.KeySet.InitFromPrivateKey(&keyWallet.KeySet.PrivateKey)
-	paymentAddStr := keyWallet.Base58CheckSerialize(wallet.PaymentAddressType)
-	switch  keyType {
-	case 0: //Old address, old encoding
-		addr, _ := wallet.GetPaymentAddressV1(paymentAddStr, false)
-		return addr
-	case 1:
-		addr, _ := wallet.GetPaymentAddressV1(paymentAddStr, true)
-		return addr
-	default:
-		return paymentAddStr
-	}
-}
-func privateKeyToPublicKey(privkey string) []byte {
-	keyWallet, err := wallet.Base58CheckDeserialize(privkey)
-	if err != nil {
-		panic(err)
-	}
-	keyWallet.KeySet.InitFromPrivateKey(&keyWallet.KeySet.PrivateKey)
-	return keyWallet.KeySet.PaymentAddress.Pk
-}
+
 func GenKeySet(b []byte) (string, string, string) {
 	if b == nil {
 		b = privacy.RandomScalar().ToBytesS()
@@ -72,7 +51,7 @@ func GenKeySet(b []byte) (string, string, string) {
 func GetPRVOutPutCoin(privkey string, height uint64) {
 	fmt.Println("========== GET PRV OUTPUT COIN ==========")
 	outCoinKey, err := debugtool.NewOutCoinKeyFromPrivateKey(privkey)
-	if err != nil{
+	if err != nil {
 		fmt.Println(err)
 		return
 	}
@@ -95,7 +74,7 @@ func GetUnspentOutputToken(privKey string, tokenID string, height uint64) {
 		return
 	}
 
-	for _, unspentCoin := range listUnspentCoins{
+	for _, unspentCoin := range listUnspentCoins {
 		fmt.Printf("version: %v, pubKey: %v, keyImage: %v, value: %v\n", unspentCoin.GetVersion(), unspentCoin.GetPublicKey(), unspentCoin.GetKeyImage(), unspentCoin.GetValue())
 	}
 
@@ -199,6 +178,21 @@ func Init() error {
 	return nil
 }
 
+func GenerateCommitteeKey(privateKey, seed string) (string, error) {
+	public := debugtool.PrivateKeyToPublicKey(privateKey)
+	seedBytes, _, err := base58.Base58Check{}.Decode(seed)
+	if err != nil {
+		return "", err
+	}
+
+	committeeKey, err := incognitokey.NewCommitteeKeyFromSeed(seedBytes, public)
+	if err != nil {
+		return "", err
+	}
+
+	return committeeKey.ToBase58()
+}
+
 //Comment the init function in blockchain/constants.go to run the debug tool.
 func main() {
 	privateKeys := []string{
@@ -211,6 +205,17 @@ func main() {
 		"112t8rnXDS4cAjFVgCDEw4sWGdaqQSbKLRH1Hu4nUPBFPJdn29YgUei2KXNEtC8mhi1sEZb1V3gnXdAXjmCuxPa49rbHcH9uNaf85cnF3tMw",
 		"112t8rnYoioTRNsM8gnUYt54ThWWrRnG4e1nRX147MWGbEazYP7RWrEUB58JLnBjKhh49FMS5o5ttypZucfw5dFYMAsgDUsHPa9BAasY8U1i",
 		"112t8rnXtw6pWwowv88Ry4XxukFNLfbbY2PLh2ph38ixbCbZKwf9ZxVjd4s7jU3RSdKctC7gGZp9piy8nZoLqHwqDBWcsMHWsQg27S5WCdm4",
+		"",
+		"1111111AGn6ApFymmmPHK93oBdRHErvZd4Kg96Fgfg8gUqgSiuzENo44rUwcK2i8fQw4pd9cYzjWMe7wrSQ77cPASQfg5r6WiTSwNmtcB7d",
+		"1111111ANLMS7hN5kXA9PrPYbGAb4EPCTtCUnm1T756dMqVSgyiw6HUXjpxQBAvqx7UusyRYLKFfmUzaS9EvJFDPS72uPtX73HYHEi7Un5h",
+		"1111111ALNQyX2N8pqMtm559yPyutwenzJEToTfJAmxx3VJ8N4QHZsyWznRTeWDqiRahHCEf9owKyzEuqDkHgYnWfVx4j74UNuvAAdCFrur",
+		"1111111EEeZcK1AHDVP9RcsQm3PBs1fU2ZmJmAUViKjMsJoiAwFjw1HJRHv1EDdbB1SXFgXSFiuRwGAzE6GPPaUNfAyqJyLy7yT5qx3f4rJ",
+		"11111116ZC2uQaFqDNNVyYRaytNyPD5gnYinMDETFjCPdfe2DfpdP1VyZDJD72esH4oauT1FbSyoBRovnb5zrPiBAW5o28tHpxXKsGLypta",
+		"1111111848Et3EqTnpJzoUyvW1xFeybgaZ9XuoZgTywKh6zVFaqYk5wU4zPw4Q6iBUxU3fSemXWRA8a72VAwa7CxujuwQAaoo9CyUEqczXL",
+		"1111111591Zh66MGKjcHwkhdzqRhgwASJnLGVScJiBw6ZZVUStTRzEDsiYBT2EZmheZgREjzg5wrj3UTqstkQHwfkHc1QP4y91QyQwTX8z",
+		"111111165vjf5eCgiT7ZeFgmoVP44n2CYChRUw2rTMejrgwwcocxJPmCituH3ygJvYmKnnFtTkaVAWUAKJySDu2tLC3SpWs1TyjGed8jZ8z",
+		"1111111Cjswfvzmhpge7B73ww1GWfj5CNuHcyBt72qNP1ceoaCQ4uHNhDyUNY3xSUeakovcDKTcwUsVvmuacVMamGVo1zbdB9u57Frcxc4p",
+		"11111117GB8eNDXhVSdh7mqFw9yWcsMrW2B2yTreXxvDiFsg2WTX79UNDJ9ukxsM14jK3vWqbzvZ1B95XKZh6tWePifWkodNCMLXhF5Bwsv",
 	}
 	privateSeeds := make(map[string]string)
 
@@ -223,12 +228,8 @@ func main() {
 	tokenIDs["BTC"] = "b832e5d3b1f01a4f0623f7fe91d6673461e1f5d37d91fe78c5c2e6183ff39696"
 	tokenIDs["PRV"] = common.PRVIDStr
 
-	rpchandler.InitMainNet()
-
-	//tool := new(rpchandler.RPCServer).InitLocal("9334")
-	//tool := new(rpchandler.RPCServer).InitMainnet()
-	//tool := new(rpchandler.RPCServer).InitDevNet()
-	//tool := new(rpchandler.RPCServer).InitTestnet()
+	//rpchandler.InitDevNet("8334")
+	rpchandler.InitLocal("9334")
 
 	activeShards, err := debugtool.GetActiveShard()
 	if err != nil {
@@ -277,7 +278,11 @@ func main() {
 			common.MaxShardNumber = activeShards
 		}
 		if args[0] == "initdevnet" {
-			rpchandler.InitDevNet()
+			port := ""
+			if len(args) > 1 {
+				port = args[1]
+			}
+			rpchandler.InitDevNet(port)
 			activeShards, err := debugtool.GetActiveShard()
 			if err != nil {
 				panic(err)
@@ -309,7 +314,28 @@ func main() {
 
 		//PRV RPCs
 		if args[0] == "send" {
-			sendTx()
+			addrList := make([]string, 0)
+			amountList := make([]uint64, 0)
+			for i:=0; i<8 ; i ++ {
+				addr := debugtool.PrivateKeyToPaymentAddress(privateKeys[i+1], -1)
+				addrList = append(addrList, addr)
+				amountList = append(amountList, 2000000000000)
+			}
+
+			for i:=0; i<10; i++ {
+				_, addr, _ := GenKeySet([]byte(fmt.Sprintf("can%v", i)))
+				addrList = append(addrList, addr)
+				amountList = append(amountList, 2000000000000)
+			}
+
+			txHash, err := debugtool.CreateAndSendRawTransaction(privateKeys[0], addrList, amountList, -1, nil)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			fmt.Println("CreateAndSendRawTransaction succeeded. Txhash:", txHash)
+
 		}
 		if args[0] == "outcoin" {
 			var privateKey string
@@ -350,7 +376,7 @@ func main() {
 			}
 
 			balance, err := debugtool.GetBalance(privateKey, common.PRVIDStr)
-			if err != nil{
+			if err != nil {
 				fmt.Println(err)
 				continue
 			}
@@ -387,7 +413,7 @@ func main() {
 					fmt.Println("Cannot find the private key")
 					continue
 				}
-				paymentAddress = privateKeyToPaymentAddress(privateKeys[index], -1)
+				paymentAddress = debugtool.PrivateKeyToPaymentAddress(privateKeys[index], -1)
 			}
 
 			amount, err := strconv.ParseUint(args[3], 10, 64)
@@ -397,7 +423,7 @@ func main() {
 			}
 
 			//Default version is 2
-			txVersion := int8(2)
+			txVersion := int8(-1)
 			if len(args) > 4 {
 				tmpVersion, err := strconv.ParseUint(args[4], 10, 32)
 				if err != nil {
@@ -455,7 +481,7 @@ func main() {
 		}
 
 		//CONVERT RPC
-		if args[0] == "convert" {//works for both PRV and tokens
+		if args[0] == "convert" { //works for both PRV and tokens
 			if len(args) < 2 {
 				fmt.Println("need at least 2 arguments.")
 			}
@@ -507,7 +533,6 @@ func main() {
 				fmt.Printf("CreateAndSendRawTokenConversionTransaction succeeded. TxHash: %v.\n", txHash)
 			}
 
-
 		}
 
 		//TOKEN RPCs
@@ -540,7 +565,7 @@ func main() {
 			}
 
 			//Default version is 2
-			txVersion := int8(2)
+			txVersion := int8(-1)
 			if len(args) > 3 {
 				tmpVersion, err := strconv.ParseUint(args[3], 10, 32)
 				if err != nil {
@@ -591,7 +616,7 @@ func main() {
 			}
 
 			balance, err := debugtool.GetBalance(privateKey, tokenID)
-			if err != nil{
+			if err != nil {
 				fmt.Println(err)
 				continue
 			}
@@ -630,7 +655,7 @@ func main() {
 					fmt.Println("Cannot find the private key")
 					continue
 				}
-				paymentAddress = privateKeyToPaymentAddress(privateKeys[index], -1)
+				paymentAddress = debugtool.PrivateKeyToPaymentAddress(privateKeys[index], -1)
 			} else {
 				paymentAddress = args[2]
 			}
@@ -653,7 +678,7 @@ func main() {
 			}
 
 			//Default version is 2
-			txVersion := int8(2)
+			txVersion := int8(-1)
 			if len(args) > 5 {
 				tmpVersion, err := strconv.ParseUint(args[5], 10, 32)
 				if err != nil {
@@ -682,7 +707,7 @@ func main() {
 		//KEY
 		if args[0] == "payment" {
 			var err error
-			if len (args) < 2{
+			if len(args) < 2 {
 				fmt.Println("need at least 2 arguments")
 				continue
 			}
@@ -708,14 +733,75 @@ func main() {
 					continue
 				}
 			}
-			fmt.Println("Payment Address", privateKeyToPaymentAddress(privateKey, int(keyType)))
+			fmt.Println("Payment Address", debugtool.PrivateKeyToPaymentAddress(privateKey, int(keyType)))
 		}
 		if args[0] == "public" {
-			fmt.Println("Public Key", privateKeyToPublicKey(args[1]))
+			var privateKey string
+			if len(args[1]) < 3 {
+				index, err := strconv.ParseInt(args[1], 10, 32)
+				if err != nil {
+					fmt.Println(err)
+					panic(err)
+				}
+				if index >= int64(len(privateKeys)) {
+					fmt.Println("Cannot find the private key")
+					continue
+				}
+				privateKey = privateKeys[index]
+			} else {
+				privateKey = args[1]
+			}
+			pubKeyBytes := debugtool.PrivateKeyToPublicKey(privateKey)
+			pubKeyStr := base58.Base58Check{}.Encode(pubKeyBytes, 0x00)
+			fmt.Println("Public Key", pubKeyBytes, pubKeyStr)
 		}
 		if args[0] == "genkeyset" {
 			privateKey, payment, _ := GenKeySet([]byte(args[1]))
 			fmt.Println(privateKey, payment)
+		}
+		if args[0] == "cmkey" {
+			pri := []string {
+				"112t8sw2apGTwoVT2M6adwp1fQvH5KzVsns5GFFEHzLxKTYpqmVTJVCUTAzfkQDNKUondiV6MBCSk9MVDao5RRwuhdjkScMBZ42YJ3hZb6Db",
+				"112t8sw37yYFcpGhQnNLsHMbBDDSbW27t3YPMLDSK2q2ZmmZ6iSc1d1K5QkCsdsZ5L3YFaLz2R1KZzJHrAxQNefukYvc5hvKgVBFgatYaDtU",
+				"112t8sw3HuTUHxw9U7agDsiBBzoLcjd3Z4o226QzUYHL9sAdHTo82iJ4TaaKZ5ZJzU6EcquxNjGTpxW5kdfrsx1EeRD7WChepy4y4WeUhvXA",
+				"112t8sw3X7XahWjLwAjgBe51nF4AKqubXFMAFeumM5ECDr8RFH1FKoqzjRECkuXbqJDGr3sAM3qREixjtMpMgPrg63XdKBGYikiSaH89A53V",
+				"112t8sw3swjDhYme56xtqu2Zc1CsodJAekC6FL5Lj7QpV7ZY9WvnyrDQc1W3Vim74dcHFR9QZLcu9LkUpDaziTX4bF39gKMBegWVgBDn6nv4",
+				"112t8sw4G9xiRC151H5MWV4Kb1CfXAugPQuecjrnktU7W3JUVqd8LhCMa4jwiqaqnSSdNQvKRTqibA7W9tSKegn16HveZDJs1UC4GP4LiRTn",
+				"112t8sw4ZAc1wwbKog9NhE6VqpEiPii4reg8Zc5AVGu7BkxtPYv95dXRJtzP9CkepgzfUwTseNzgHXRovo9oDb8XrEpb5EgFhKdZhwjzHTbd",
+				"112t8sw4ijTH6E6gbPhCF6y36zijFfb7T1JnU8GWVSMmWMP85zzmjkoLRH4fF5HkJR8W7uqfnDQ19ARtW9mDmvCUviNNdZ3i39PDhXztjfgM",
+				"112t8sw4uNsCeamWRqU1QLiquPbBfGB7HE8qyd7YsBUjSWf3nhcRmoMfyptRDAatJNWBopRTigciNHcPVoZG3bhMKUhrvv6LSzq8FwSwNvBD",
+				"112t8sw5AggHj5K7c2gZFqnuUypfRimgLvoxHK8U6yE33wAeU1bV2DLkRVhVDHycwaM5LFwLeVLyMGBCx97FyBx3NTHimNVb9MwjP2BeSDDd",
+				"112t8sw5fAsCpef9kSYwit7deNVmwhLs64R6s2cH49rWna8yhyCybKM85sFmegtVnEarWXuaTjvVaxVEu3rDTrz7dyUQcy5m37o3LekSxAWe",
+				"112t8sw5ne46SFtGAvvhDMj31LdhJcqsTnkiSz439WJc7xtLsRDiA8uq2AYaCPhi3a56soeSBdqRSwyWSBajv89GrPsQk2svLUonNBCSvHX9",
+				"112t8sw6XHCn6jmMAfC47kvrhRVG4o1zKBA41wxfb53S3tHXLZNyWKZWSgSHnEPAHKyEvvho3b4oKLxfNka5LJttkmmYpzq2Wccn6ohvjvKN",
+			}
+
+			se := []string {
+				"12kkr7NxhnekKKBcn9RNgR31gy6LxqiX51eoexvPQpToGdxm28k",
+				"12RpaScwxD4xEC5et5UrkStSjTSTd6djFXT52B8M5U8v23bZ9yK",
+				"1aJCk2HxULpcBADDZu7BxZBivTqMJB4kSAyVJeuJNaBCxTfJ1A",
+				"1CvVLnKzeWZWGrijrHBo9b5PPy77scgcGhuyPdz6aWGVU9qkji",
+				"1e2571JcwDa6nxfW66FSA9NpRpvcMowbU1M7vTXvUR6WJa6AjJ",
+				"1eZt6YvHHhiKYBJrCpNj4KnkVNBn46bk11MgokpWYBaPssdBCU",
+				"15KssSyWEX3Jw49ktvFFH9rhZfiGhCrqB3KXWFTG2WzSmqD9AS",
+				"1cJ6MDSA1mSHezUrgvYDE4F1zvR6V3WviArYJUr8NWQmJzHaQN",
+				"1tN2rcueWU4xaZJMNvn7XHk1ybSqeDKhzbr1G8c4v8nZLnnqQ2",
+				"1qjRfdYhLaZS5SETLiEaEod3D8dwJpTRPQGN87gyUrt1G9PEWM",
+				"12cyENYgnbvBr8xgR7BayWWoZtVXeHGXhY4vhivzf7MuXxBY465",
+				"1zHp2owSB8DfeUAGxmL1DhVoiuqcbN3ZtPtLrXYSZWqKLNqr38",
+				"1297Jr4CNbE54Ayg5p9Yf1JPEL5ynP1MCnTvKg7vREU14XUU9Gg",
+			}
+
+			for i, priKey := range pri {
+				cmkey, err := GenerateCommitteeKey(priKey, se[i])
+				if err != nil {
+					fmt.Println(err)
+				}
+
+				fmt.Println(cmkey)
+			}
+
+
 		}
 
 		//BLOCKCHAIN
@@ -739,6 +825,25 @@ func main() {
 		}
 		if args[0] == "txhash" {
 			GetTxByHash(args[1])
+		}
+		if args[0] == "shardstate" {
+			if len(args) < 2 {
+				fmt.Println("not enough param for shardstate")
+				continue
+			}
+
+			shardID, err := strconv.ParseInt(args[1], 10, 32)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			b, err := rpc.GetShardBestState(byte(shardID))
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			fmt.Println(string(b))
 		}
 
 		//PDEX
@@ -902,7 +1007,7 @@ func main() {
 		if args[0] == "pdestate" {
 			var bHeight uint64
 			var err error
-			if len(args) > 1{
+			if len(args) > 1 {
 				tmpHeight, err := strconv.ParseInt(args[1], 10, 32)
 				if err != nil {
 					fmt.Println("cannot get beacon height", err)
@@ -932,7 +1037,7 @@ func main() {
 		if args[0] == "poolpairs" {
 			var bHeight uint64
 			var err error
-			if len(args) > 1{
+			if len(args) > 1 {
 				tmpHeight, err := strconv.ParseInt(args[1], 10, 32)
 				if err != nil {
 					fmt.Println("cannot get beacon height", err)
@@ -980,7 +1085,7 @@ func main() {
 
 			var bHeight uint64
 			var err error
-			if len(args) > 3{
+			if len(args) > 3 {
 				tmpHeight, err := strconv.ParseInt(args[3], 10, 32)
 				if err != nil {
 					fmt.Println("cannot get beacon height", err)
@@ -1067,7 +1172,7 @@ func main() {
 				}
 			}
 
-			rate := float64(expectedTradeValue)/float64(amount)
+			rate := float64(expectedTradeValue) / float64(amount)
 			fmt.Printf("Sell %v of token %v, get %v of token %v, rate %v, %v\n", amount, tokenID1, expectedTradeValue, tokenID2, rate, 1/rate)
 		}
 
@@ -1084,6 +1189,9 @@ func main() {
 					panic(err)
 				}
 				privateKey = privateKeys[index]
+			} else if len(args[1]) < 5 {
+				privateKey, _, _ = GenKeySet([]byte(args[1]))
+				fmt.Println("Staker privateKey:", privateKey)
 			}
 
 			autoStaking := true
@@ -1099,8 +1207,9 @@ func main() {
 			privateSeed, ok := privateSeeds[privateKey]
 			if !ok {
 				privateSeedBytes := privacy.HashToScalar([]byte(privateKey)).ToBytesS()
-				privateSeed := base58.Base58Check{}.Encode(privateSeedBytes, common.ZeroByte)
+				privateSeed = base58.Base58Check{}.Encode(privateSeedBytes, common.ZeroByte)
 				privateSeeds[privateKey] = privateSeed
+				fmt.Println("privateSeed", privateSeed)
 			}
 
 			txHash, err := debugtool.CreateAndSendStakingTransaction(privateKey, privateSeed, "", "", autoStaking)
@@ -1123,13 +1232,16 @@ func main() {
 					panic(err)
 				}
 				privateKey = privateKeys[index]
+			} else if len(args[1]) < 5 {
+				privateKey, _, _ = GenKeySet([]byte(args[1]))
+				fmt.Println("Staker privateKey:", privateKey)
 			}
 
 			var privateSeed string
 			privateSeed, ok := privateSeeds[privateKey]
 			if !ok {
 				privateSeedBytes := privacy.HashToScalar([]byte(privateKey)).ToBytesS()
-				privateSeed := base58.Base58Check{}.Encode(privateSeedBytes, common.ZeroByte)
+				privateSeed = base58.Base58Check{}.Encode(privateSeedBytes, common.ZeroByte)
 				privateSeeds[privateKey] = privateSeed
 			}
 
@@ -1158,6 +1270,9 @@ func main() {
 					panic(err)
 				}
 				privateKey = privateKeys[index]
+			} else if len(args[1]) < 5 {
+				privateKey, _, _ = GenKeySet([]byte(args[1]))
+				fmt.Println("Staker privateKey:", privateKey)
 			}
 
 			candidateAddr := ""
@@ -1237,6 +1352,42 @@ func main() {
 
 			fmt.Println(b.BlockHash, b.BlockNumber, b.TxHash)
 		}
+		if args[0] == "shield" {
+			if len(args) < 5 {
+				fmt.Println("Not enough param for pdetradeprv")
+				continue
+			}
+
+			privateKey := args[1]
+			if len(args[1]) < 3 {
+				index, err := strconv.ParseInt(args[1], 10, 32)
+				if err != nil {
+					panic(err)
+				}
+				privateKey = privateKeys[index]
+			}
+
+			tokenID := args[2]
+			if len(args[2]) < 10 {
+				tokenID = tokenIDs[args[2]]
+			}
+
+			ethTxHash := args[3]
+
+			amount, err := strconv.ParseInt(args[4], 10, 64)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			txHash, err := debugtool.CreateAndSendIssuingETHRequestTransaction(privateKey, ethTxHash, tokenID, uint64(amount))
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			fmt.Printf("CreateAndSendIssuingETHRequestTransaction succeeded. TxHash: %v.\n", txHash)
+		}
 
 		//GENERAL
 		if args[0] == "shard" {
@@ -1256,6 +1407,86 @@ func main() {
 				continue
 			}
 			fmt.Println(b)
+		}
+
+		if args[0] == "gencan" {
+			for i := 0; i < 10; i++ {
+				privateKey, _, _ := GenKeySet([]byte(fmt.Sprintf("can%v", i)))
+				privateSeedBytes := privacy.HashToScalar([]byte(privateKey)).ToBytesS()
+				privateSeed := base58.Base58Check{}.Encode(privateSeedBytes, common.ZeroByte)
+
+
+				fmt.Printf("if [ \"$1\" == \"can%v\" ]; then\n", i)
+				toBePrinted2 := fmt.Sprintf("./incognito --datadir \"data/staker%v\" --rpclisten \"0.0.0.0:%v\" --listen \"0.0.0.0:%v\" --miningkeys \"%v\" --discoverpeersaddress \"0.0.0.0:9330\" --externaladdress \"0.0.0.0:%v\" --norpcauth",
+					i, 10335+i, 10452+i, privateSeed, 10452+i)
+				fmt.Println(toBePrinted2)
+				fmt.Println("fi")
+			}
+		}
+
+		//SECURE
+		if args[0] == "stransfer" {
+			if len(args) < 4 {
+				fmt.Println("need at least 4 arguments.")
+			}
+			var privateKey string
+			if len(args[1]) < 3 {
+				index, err := strconv.ParseInt(args[1], 10, 32)
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
+				if index >= int64(len(privateKeys)) {
+					fmt.Println("Cannot find the private key")
+					continue
+				}
+				privateKey = privateKeys[index]
+			} else {
+				privateKey = args[1]
+			}
+
+			var paymentAddress = args[2]
+			if len(args[2]) < 4 {
+				index, err := strconv.ParseInt(args[2], 10, 32)
+				if err != nil {
+					fmt.Println(err)
+					panic(err)
+				}
+				if index >= int64(len(privateKeys)) {
+					fmt.Println("Cannot find the private key")
+					continue
+				}
+				paymentAddress = debugtool.PrivateKeyToPaymentAddress(privateKeys[index], -1)
+			}
+
+			amount, err := strconv.ParseUint(args[3], 10, 64)
+			if err != nil {
+				fmt.Println("cannot parse amount", args[3], len(args[3]))
+				continue
+			}
+
+			////Default version is 2
+			//txVersion := int8(-1)
+			//if len(args) > 4 {
+			//	tmpVersion, err := strconv.ParseUint(args[4], 10, 32)
+			//	if err != nil {
+			//		fmt.Println("cannot parse version", err)
+			//		continue
+			//	}
+			//	if tmpVersion > 2 {
+			//		fmt.Println("version invalid", tmpVersion)
+			//		continue
+			//	}
+			//	txVersion = int8(tmpVersion)
+			//}
+
+			txHash, err := debugtool.CreateAndSendRawSecureTransaction(privateKey, paymentAddress, amount, 2)
+			if err != nil {
+				fmt.Println("CreateAndSendRawTransaction returns an error:", err)
+				continue
+			}
+
+			fmt.Printf("CreateAndSendRawSecureTransaction succeeded. TxHash: %v.\n", txHash)
 		}
 	}
 }
