@@ -9,6 +9,7 @@ import (
 	"github.com/thanhn-inc/debugtool/metadata"
 	"github.com/thanhn-inc/debugtool/privacy"
 	"github.com/thanhn-inc/debugtool/rpchandler"
+	"github.com/thanhn-inc/debugtool/rpchandler/jsonresult"
 	"github.com/thanhn-inc/debugtool/rpchandler/rpc"
 	"github.com/thanhn-inc/debugtool/transaction/tx_generic"
 	"github.com/thanhn-inc/debugtool/transaction/tx_ver1"
@@ -238,4 +239,29 @@ func CreateAndSendRawConversionTransaction(privateKey string) (string, error) {
 	}
 
 	return txHash, nil
+}
+
+func CheckTxInBlock(txHash string) (bool, error) {
+	responseInBytes, err := rpc.GetTransactionByHash(txHash)
+	if err != nil {
+		return false, err
+	}
+
+	response, err := rpchandler.ParseResponse(responseInBytes)
+	if err != nil {
+		return false, err
+	}
+
+	var txDetail jsonresult.TransactionDetail
+	err = json.Unmarshal(response.Result, &txDetail)
+	if err != nil {
+		return false, err
+	}
+
+	if txDetail.IsInMempool {
+		fmt.Printf("tx %v is currently in mempool\n", txHash)
+		return false, nil
+	}
+
+	return txDetail.IsInBlock, nil
 }
