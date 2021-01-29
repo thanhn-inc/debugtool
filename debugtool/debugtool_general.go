@@ -6,6 +6,7 @@ import (
 	"github.com/thanhn-inc/debugtool/rpchandler"
 	"github.com/thanhn-inc/debugtool/rpchandler/jsonresult"
 	"github.com/thanhn-inc/debugtool/rpchandler/rpc"
+	"github.com/thanhn-inc/debugtool/wallet"
 )
 
 type CustomToken struct {
@@ -89,4 +90,29 @@ func GetListToken() (map[string]CustomToken, error) {
 	}
 
 	return listTokens, nil
+}
+
+//Keys
+func PrivateKeyToPaymentAddress(privkey string, keyType int) string {
+	keyWallet, _ := wallet.Base58CheckDeserialize(privkey)
+	keyWallet.KeySet.InitFromPrivateKey(&keyWallet.KeySet.PrivateKey)
+	paymentAddStr := keyWallet.Base58CheckSerialize(wallet.PaymentAddressType)
+	switch keyType {
+	case 0: //Old address, old encoding
+		addr, _ := wallet.GetPaymentAddressV1(paymentAddStr, false)
+		return addr
+	case 1:
+		addr, _ := wallet.GetPaymentAddressV1(paymentAddStr, true)
+		return addr
+	default:
+		return paymentAddStr
+	}
+}
+func PrivateKeyToPublicKey(privkey string) []byte {
+	keyWallet, err := wallet.Base58CheckDeserialize(privkey)
+	if err != nil {
+		panic(err)
+	}
+	keyWallet.KeySet.InitFromPrivateKey(&keyWallet.KeySet.PrivateKey)
+	return keyWallet.KeySet.PaymentAddress.Pk
 }
