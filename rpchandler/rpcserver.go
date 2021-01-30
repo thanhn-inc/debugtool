@@ -69,9 +69,11 @@ func InitLocal(port string) {
 		EthServer = new(RPCServer)
 	}
 	Server.url = "http://127.0.0.1:" + port
+	//EthServer.url = "https://kovan.infura.io/v3/93fe721349134964aa71071a713c5cef"
+	EthServer.url = "http://127.0.0.1:8545"
 }
 
-func InitDevNet() {
+func InitDevNet(port string) {
 	if Server == nil {
 		Server = new(RPCServer)
 	}
@@ -79,7 +81,11 @@ func InitDevNet() {
 		EthServer = new(RPCServer)
 	}
 
-	Server.url = "http://139.162.55.124:8334"
+	if len(port) > 0 {
+		Server.url = "http://139.162.55.124:" + port
+	} else {
+		Server.url = "http://139.162.55.124:3334"
+	}
 	EthServer.url = "https://kovan.infura.io/v3/93fe721349134964aa71071a713c5cef"
 	common.EthContractAddressStr = common.TestnetETHContractAddressStr
 }
