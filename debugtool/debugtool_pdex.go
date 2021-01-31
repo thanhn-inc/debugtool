@@ -218,6 +218,58 @@ func GetTradeValue(tokenToSell, TokenToBuy string, sellAmount uint64) (uint64, e
 	return UniswapValue(sellAmount, sellPoolAmount, buyPoolAmount)
 }
 
+func GetXTradeValue(tokenToSell, tokenToBuy string, sellAmount uint64) (uint64, error) {
+	bestBlocks, err := GetBestBlock()
+	if err != nil {
+		return 0, err
+	}
+
+	bestBeaconHeight := bestBlocks[-1]
+
+	allPoolPairs, err := GetAllPDEPoolPairs(bestBeaconHeight)
+	if err != nil {
+		return 0, err
+	}
+
+	keyPool1 := jsonresult.BuildPDEPoolForPairKey(bestBeaconHeight, tokenToSell, common.PRVIDStr)
+	keyPool2 := jsonresult.BuildPDEPoolForPairKey(bestBeaconHeight, common.PRVIDStr, tokenToBuy)
+
+	var poolPair1, poolPair2 *jsonresult.PDEPoolForPair
+	var ok bool
+	if poolPair1, ok = allPoolPairs[string(keyPool1)]; !ok {
+		return 0, fmt.Errorf("cannot found pool pair %v - %v", tokenToSell, common.PRVIDStr)
+	}
+	if poolPair2, ok = allPoolPairs[string(keyPool2)]; !ok {
+		return 0, fmt.Errorf("cannot found pool pair %v - %v", common.PRVIDStr, tokenToBuy)
+	}
+
+	var sellPoolAmount1, buyPoolAmount1 uint64
+	if poolPair1.Token1IDStr == tokenToSell {
+		sellPoolAmount1 = poolPair1.Token1PoolValue
+		buyPoolAmount1 = poolPair1.Token2PoolValue
+	} else {
+		sellPoolAmount1 = poolPair1.Token2PoolValue
+		buyPoolAmount1 = poolPair1.Token1PoolValue
+	}
+
+	expectPRV, err := UniswapValue(sellAmount, sellPoolAmount1, buyPoolAmount1)
+	if err != nil {
+		return 0, err
+	}
+
+	var sellPoolAmount2, buyPoolAmount2 uint64
+	if poolPair2.Token1IDStr == common.PRVIDStr {
+		sellPoolAmount2 = poolPair2.Token1PoolValue
+		buyPoolAmount2 = poolPair2.Token2PoolValue
+	} else {
+		sellPoolAmount2 = poolPair2.Token2PoolValue
+		buyPoolAmount2 = poolPair2.Token1PoolValue
+	}
+
+
+	return UniswapValue(expectPRV, sellPoolAmount2, buyPoolAmount2)
+}
+
 //Get the remote server to check price for trading things
 func CheckPrice(tokenToSell, TokenToBuy string, sellAmount uint64) (uint64, error) {
 	responseInBytes, err := rpc.ConvertPDEPrice(tokenToSell, TokenToBuy, sellAmount)
@@ -241,4 +293,18 @@ func CheckPrice(tokenToSell, TokenToBuy string, sellAmount uint64) (uint64, erro
 	}
 
 	return convertedPrice[0].Price, nil
+}
+
+//Get the remote server to check cross price for trading things
+func CheckXPrice(tokenToSell, TokenToBuy string, sellAmount uint64) (uint64, error) {
+	if tokenToSell == common.PRVIDStr || TokenToBuy == common.PRVIDStr {
+		return CheckPrice(tokenToSell, TokenToBuy, sellAmount)
+	}
+
+	expectedPRV, err := CheckPrice(tokenToSell, common.PRVIDStr, sellAmount)
+	if err != nil {
+		return 0, err
+	}
+
+	return CheckPrice(common.PRVIDStr, TokenToBuy, expectedPRV)
 }
