@@ -1,10 +1,18 @@
 package rpc
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/thanhn-inc/debugtool/rpchandler"
 	"github.com/thanhn-inc/debugtool/wallet"
 )
+
+type ConvertedPrice struct {
+	FromTokenIDStr string
+	ToTokenIDStr   string
+	Amount         uint64
+	Price          uint64
+}
 
 func PDEContributePRV(privKeyStr string, amount string) ([]byte, error) {
 	keyWallet, _ := wallet.Base58CheckDeserialize(privKeyStr)
@@ -209,4 +217,23 @@ func GetPDEState(beaconHeight uint64) ([]byte, error){
 	}`, beaconHeight)
 
 	return rpchandler.Server.SendPostRequestWithQuery(query)
+}
+
+func ConvertPDEPrice(tokenToSell, tokenToBuy string, amount uint64) ([]byte, error) {
+	method := convertPDEPrices
+	mapParam := make(map[string]interface{})
+	mapParam["FromTokenIDStr"] = tokenToSell
+	mapParam["ToTokenIDStr"] = tokenToBuy
+	mapParam["Amount"] = amount
+
+	params := make([]interface{}, 0)
+	params = append(params, mapParam)
+
+	request := rpchandler.CreateJsonRequest("1.0", method, params, 1)
+	query, err := json.Marshal(request)
+	if err != nil {
+		return nil, err
+	}
+
+	return rpchandler.Server.SendPostRequestWithQuery(string(query))
 }
