@@ -17,15 +17,25 @@ import (
 	"sort"
 )
 
-const DefaultPRVFee = uint64(60)
+const DefaultPRVFee = uint64(20)
 
 type TxParam struct {
 	senderPrivateKey string
 	receiverList     []string
 	amountList       []uint64
 	tokenID          string
+	payFeeByToken    bool
 	txTokenType      int
 	md               metadata.Metadata
+	kvargs           map[string]interface{}
+}
+
+func (txParam *TxParam) SetKvargs(kvargs map[string]interface{}) {
+	txParam.kvargs = kvargs
+}
+
+func (txParam *TxParam) SetPayFeeToken(payFeeByToken bool) {
+	txParam.payFeeByToken = payFeeByToken
 }
 
 func NewTxParam(senderPrivateKey string,
@@ -349,7 +359,7 @@ func InitParams(privateKey string, tokenIDStr string, totalAmount uint64, hasPri
 
 		fmt.Printf("Getting random commitments for %v.\n", tokenIDStr)
 		//Retrieve commitments and indices
-		kvargs, err = GetRandomCommitmentsAndPublicKeys(shardID, tokenIDStr, len(coinsToSpend) * (privacy.RingSize - 1))
+		kvargs, err = GetRandomCommitmentsAndPublicKeys(shardID, tokenIDStr, len(coinsToSpend)*(privacy.RingSize-1))
 		if err != nil {
 			return nil, nil, err
 		}
