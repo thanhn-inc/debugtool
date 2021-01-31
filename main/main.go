@@ -1155,6 +1155,46 @@ func main() {
 			expectedTradeValue, err := debugtool.GetTradeValue(tokenID1, tokenID2, uint64(amount))
 			if err != nil {
 				if tokenID1 != common.PRVIDStr && tokenID2 != common.PRVIDStr {
+					//Call cross pools trade
+					expectedTradeValue, err = debugtool.GetXTradeValue(tokenID1, tokenID2, uint64(amount))
+					if err != nil {
+						fmt.Println(err)
+						continue
+					}
+				} else {
+					fmt.Println(err)
+					continue
+				}
+			}
+
+			rate := float64(expectedTradeValue) / float64(amount)
+			fmt.Printf("Sell %v of token %v, get %v of token %v, rate %v, %v\n", amount, tokenID1, expectedTradeValue, tokenID2, rate, 1/rate)
+		}
+		if args[0] == "checkprice" {
+			if len(args) < 4 {
+				fmt.Println("need at least 4 arguments")
+				continue
+			}
+
+			var tokenID1 = args[1]
+			if len(tokenID1) < 10 {
+				tokenID1 = tokenIDs[tokenID1]
+			}
+
+			var tokenID2 = args[2]
+			if len(tokenID2) < 10 {
+				tokenID2 = tokenIDs[tokenID2]
+			}
+
+			amount, err := strconv.ParseInt(args[3], 10, 64)
+			if err != nil {
+				fmt.Println("cannot parse amount", args[3])
+				continue
+			}
+
+			expectedTradeValue, err := debugtool.CheckPrice(tokenID1, tokenID2, uint64(amount))
+			if err != nil {
+				if tokenID1 != common.PRVIDStr && tokenID2 != common.PRVIDStr {
 					//firstly, trade to PRV
 					expectedPRV, err := debugtool.GetTradeValue(tokenID1, common.PRVIDStr, uint64(amount))
 					if err != nil {
@@ -1406,7 +1446,7 @@ func main() {
 				fmt.Println(err)
 				continue
 			}
-			fmt.Println(b)
+			fmt.Println(b, string(b))
 		}
 
 		if args[0] == "gencan" {
@@ -1465,6 +1505,15 @@ func main() {
 				continue
 			}
 
+			var securityLevel = int64(2)
+			if len(args) > 4 {
+				securityLevel, err = strconv.ParseInt(args[4], 10, 64)
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
+			}
+
 			////Default version is 2
 			//txVersion := int8(-1)
 			//if len(args) > 4 {
@@ -1480,7 +1529,7 @@ func main() {
 			//	txVersion = int8(tmpVersion)
 			//}
 
-			txHash, err := debugtool.CreateAndSendRawSecureTransaction(privateKey, paymentAddress, amount, 2)
+			txHash, err := debugtool.CreateAndSendRawSecureTransaction(privateKey, paymentAddress, amount, int(securityLevel))
 			if err != nil {
 				fmt.Println("CreateAndSendRawTransaction returns an error:", err)
 				continue
