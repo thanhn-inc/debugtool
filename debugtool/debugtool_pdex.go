@@ -173,6 +173,8 @@ func GetAllPDEPoolPairs(beaconHeight uint64) (map[string]*jsonresult.PDEPoolForP
 		return nil, err
 	}
 
+	fmt.Println("number of poolpairs:", len(pdeState.PDEPoolPairs))
+
 	return pdeState.PDEPoolPairs, nil
 }
 
@@ -190,6 +192,7 @@ func GetPDEPoolPair(beaconHeight uint64, tokenID1, tokenID2 string) (*jsonresult
 	return nil, errors.New(fmt.Sprintf("cannot found pool pair for tokenID %v and %v.", tokenID1, tokenID2))
 }
 
+//Get trade value buy calculating things at local machine
 func GetTradeValue(tokenToSell, TokenToBuy string, sellAmount uint64) (uint64, error) {
 	bestBlocks, err := GetBestBlock()
 	if err != nil {
@@ -213,4 +216,29 @@ func GetTradeValue(tokenToSell, TokenToBuy string, sellAmount uint64) (uint64, e
 	}
 
 	return UniswapValue(sellAmount, sellPoolAmount, buyPoolAmount)
+}
+
+//Get the remote server to check price for trading things
+func CheckPrice(tokenToSell, TokenToBuy string, sellAmount uint64) (uint64, error) {
+	responseInBytes, err := rpc.ConvertPDEPrice(tokenToSell, TokenToBuy, sellAmount)
+	if err != nil {
+		return 0, err
+	}
+
+	response, err := rpchandler.ParseResponse(responseInBytes)
+	if err != nil {
+		return 0, err
+	}
+
+	var convertedPrice []*rpc.ConvertedPrice
+	err = json.Unmarshal(response.Result, &convertedPrice)
+	if err != nil {
+		return 0, err
+	}
+
+	if len(convertedPrice) == 0 {
+		return 0, fmt.Errorf("no convertedPrice found")
+	}
+
+	return convertedPrice[0].Price, nil
 }
