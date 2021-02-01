@@ -117,6 +117,18 @@ func ListTokens() {
 	return
 }
 
+func ParseTokenID(arg string, tokenIDs map[string]string) (string, error) {
+	if len(arg) < 10 {
+		tokenID, ok := tokenIDs[arg]
+		if ! ok {
+			return "", fmt.Errorf("tokenID %v not found, list of supported tokenIDs: %v", arg, tokenIDs)
+		}
+		return tokenID, nil
+	}
+
+	return arg, nil
+}
+
 //Transactions
 func TransferPRV(tool *rpchandler.RPCServer, fromPrivKey, paymentAddress, amount string) {
 	fmt.Println("========== TRANSFER PRV  ==========")
@@ -227,9 +239,10 @@ func main() {
 	tokenIDs["XMR"] = "c01e7dc1d1aba995c19b257412340b057f8ad1482ccb6a9bb0adce61afbf05d4"
 	tokenIDs["BTC"] = "b832e5d3b1f01a4f0623f7fe91d6673461e1f5d37d91fe78c5c2e6183ff39696"
 	tokenIDs["PRV"] = common.PRVIDStr
+	tokenIDs["DAI"] = "3f89c75324b46f13c7b036871060e641d996a24c09b3065835cb1d38b799d6c1"
 
-	//rpchandler.InitDevNet("8334")
-	rpchandler.InitLocal("9334")
+	rpchandler.InitMainNet()
+	//rpchandler.InitLocal("9334")
 
 	activeShards, err := debugtool.GetActiveShard()
 	if err != nil {
@@ -1176,14 +1189,16 @@ func main() {
 				continue
 			}
 
-			var tokenID1 = args[1]
-			if len(tokenID1) < 10 {
-				tokenID1 = tokenIDs[tokenID1]
+			tokenID1, err := ParseTokenID(args[1], tokenIDs)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
-			var tokenID2 = args[2]
-			if len(tokenID2) < 10 {
-				tokenID2 = tokenIDs[tokenID2]
+			tokenID2, err := ParseTokenID(args[2], tokenIDs)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
 			amount, err := strconv.ParseInt(args[3], 10, 64)
@@ -1192,28 +1207,40 @@ func main() {
 				continue
 			}
 
-			expectedTradeValue, err := debugtool.CheckPrice(tokenID1, tokenID2, uint64(amount))
+			expectedTradeValue, err := debugtool.CheckXPrice(tokenID1, tokenID2, uint64(amount))
 			if err != nil {
-				if tokenID1 != common.PRVIDStr && tokenID2 != common.PRVIDStr {
-					//firstly, trade to PRV
-					expectedPRV, err := debugtool.GetTradeValue(tokenID1, common.PRVIDStr, uint64(amount))
-					if err != nil {
-						fmt.Println(err)
-						continue
-					}
-					expectedTradeValue, err = debugtool.GetTradeValue(common.PRVIDStr, tokenID2, expectedPRV)
-					if err != nil {
-						fmt.Println(err)
-						continue
-					}
-				} else {
-					fmt.Println(err)
-					continue
-				}
+				fmt.Println(err)
+				continue
 			}
 
 			rate := float64(expectedTradeValue) / float64(amount)
 			fmt.Printf("Sell %v of token %v, get %v of token %v, rate %v, %v\n", amount, tokenID1, expectedTradeValue, tokenID2, rate, 1/rate)
+		}
+		if args[0] == "beststable" {
+			if len(args) < 2 {
+				fmt.Println("not enough param for beststable")
+			}
+
+			amount, err := strconv.ParseInt(args[1], 10, 64)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			tokenID := common.PRVIDStr
+			if len(args) > 2 {
+				tokenID, err = ParseTokenID(args[2], tokenIDs)
+				if err != nil {
+					fmt.Println(err)
+				}
+			}
+
+			token, value, err := debugtool.ChooseBestStableCoinPool(tokenID, uint64(amount))
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			fmt.Println(token, value)
 		}
 
 		//STAKING
