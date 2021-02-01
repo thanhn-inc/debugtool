@@ -139,9 +139,7 @@ func (key *KeyWallet) Serialize(keyType byte, isNewCheckSum bool) ([]byte, error
 		return []byte{}, NewWalletError(InvalidKeyTypeErr, nil)
 	}
 
-
 	checkSum := base58.ChecksumFirst4Bytes(buffer.Bytes(), isNewCheckSum)
-
 
 	serializedKey := append(buffer.Bytes(), checkSum...)
 	return serializedKey, nil
@@ -237,11 +235,11 @@ func deserialize(data []byte) (*KeyWallet, error) {
 
 	// validate checksum: allowing both new- and old-encoded strings
 	// try to verify in the new way first
-	cs1 := base58.ChecksumFirst4Bytes(data[0 : len(data)-4], true)
+	cs1 := base58.ChecksumFirst4Bytes(data[0:len(data)-4], true)
 	cs2 := data[len(data)-4:]
-	if !bytes.Equal(cs1, cs2){ // try to compare old checksum
-		oldCS1 := base58.ChecksumFirst4Bytes(data[0: len(data) - 4], false)
-		if !bytes.Equal(oldCS1, cs2){
+	if !bytes.Equal(cs1, cs2) { // try to compare old checksum
+		oldCS1 := base58.ChecksumFirst4Bytes(data[0:len(data)-4], false)
+		if !bytes.Equal(oldCS1, cs2) {
 			return nil, NewWalletError(InvalidChecksumErr, nil)
 		}
 	}
@@ -280,14 +278,14 @@ func GetPaymentAddressV1(addr string, isNewEncoding bool) (string, error) {
 	//Remove the publicOTA key and try to deserialize
 	newWallet.KeySet.PaymentAddress.OTAPublic = nil
 
-	if isNewEncoding{
+	if isNewEncoding {
 		addrV1 := newWallet.Base58CheckSerialize(PaymentAddressType)
 		if len(addrV1) == 0 {
 			return "", errors.New(fmt.Sprintf("cannot decode new payment address: %v", addr))
 		}
 
 		return addrV1, nil
-	}else{
+	} else {
 		addr1InBytes, err := newWallet.Serialize(PaymentAddressType, false)
 		if err != nil {
 			return "", errors.New(fmt.Sprintf("cannot decode new payment address: %v", addr))
@@ -309,14 +307,14 @@ func ComparePaymentAddresses(addr1, addr2 string) (bool, error) {
 	//If these address strings are the same, just try to deserialize one of them
 	if addr1 == addr2 {
 		_, err := Base58CheckDeserialize(addr1)
-		if err != nil{
+		if err != nil {
 			return false, err
 		}
 		return true, nil
 	}
 	//If their lengths are the same, just compare the inputs
 	keyWallet1, err := Base58CheckDeserialize(addr1)
-	if err != nil{
+	if err != nil {
 		return false, err
 	}
 
@@ -340,4 +338,25 @@ func ComparePaymentAddresses(addr1, addr2 string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func GenRandomWalletForShardID(shardID byte) (*KeyWallet, error) {
+	numTries := 1000
+	for numTries > 0 {
+		tmpWallet, err := NewMasterKey(common.RandBytes(32))
+		if err != nil {
+			return nil, err
+		}
+
+		pk := tmpWallet.KeySet.PaymentAddress.Pk
+
+		lastByte := pk[len(pk) - 1]
+		if lastByte == shardID {
+			return tmpWallet, nil
+		}
+
+		numTries--
+	}
+
+	return nil, fmt.Errorf("failed after 100 tries")
 }
