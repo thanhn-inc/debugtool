@@ -373,3 +373,25 @@ func InitParams(privateKey string, tokenIDStr string, totalAmount uint64, hasPri
 		return coinsToSpend, kvargs, nil
 	}
 }
+
+func GetTokenFee(shardID byte, tokenIDStr string) (uint64, error) {
+	responseInBytes, err := rpc.EstimateFeeWithEstimator(-1, shardID, 10, tokenIDStr)
+	if err != nil {
+		return 0, err
+	}
+
+	response, err := rpchandler.ParseResponse(responseInBytes)
+	if err != nil {
+		return 0, err
+	}
+
+	var feeEstimateResult rpc.EstimateFeeResult
+	err = json.Unmarshal(response.Result, &feeEstimateResult)
+	if err != nil {
+		return 0, err
+	}
+
+
+	return feeEstimateResult.EstimateFeeCoinPerKb, nil
+
+}
