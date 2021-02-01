@@ -205,6 +205,43 @@ func GenerateCommitteeKey(privateKey, seed string) (string, error) {
 	return committeeKey.ToBase58()
 }
 
+func ParsePrivateKey(arg string, privateKeys []string) (string, error) {
+	var privateKey string
+	if len(arg) < 3 {
+		index, err := strconv.ParseInt(arg, 10, 32)
+		if err != nil {
+			return "", err
+		}
+		if index >= int64(len(privateKeys)) {
+			return "", fmt.Errorf( "Cannot find the private key")
+		}
+		privateKey = privateKeys[index]
+	} else {
+		privateKey = arg
+	}
+
+	return privateKey, nil
+}
+
+func ParsePaymentAddress(arg string, privateKeys []string) (string, error) {
+	var paymentAddr string
+	if len(arg) < 3 {
+		index, err := strconv.ParseInt(arg, 10, 32)
+		if err != nil {
+			return "", err
+		}
+		if index >= int64(len(privateKeys)) {
+			return "", fmt.Errorf( "Cannot find the private key")
+		}
+		privateKey := privateKeys[index]
+		paymentAddr = debugtool.PrivateKeyToPaymentAddress(privateKey, -1)
+	} else {
+		paymentAddr = arg
+	}
+
+	return paymentAddr, nil
+}
+
 //Comment the init function in blockchain/constants.go to run the debug tool.
 func main() {
 	privateKeys := []string{
@@ -239,9 +276,10 @@ func main() {
 	tokenIDs["XMR"] = "c01e7dc1d1aba995c19b257412340b057f8ad1482ccb6a9bb0adce61afbf05d4"
 	tokenIDs["BTC"] = "b832e5d3b1f01a4f0623f7fe91d6673461e1f5d37d91fe78c5c2e6183ff39696"
 	tokenIDs["PRV"] = common.PRVIDStr
+	tokenIDs["TEMP"] = "0000000000000000000000000000000000000000000000000000000000000100"
 	tokenIDs["DAI"] = "3f89c75324b46f13c7b036871060e641d996a24c09b3065835cb1d38b799d6c1"
 
-	rpchandler.InitMainNet()
+	rpchandler.InitTestNet()
 	//rpchandler.InitLocal("9334")
 
 	activeShards, err := debugtool.GetActiveShard()
@@ -372,20 +410,14 @@ func main() {
 			GetPRVOutPutCoin(privateKey, bi.Uint64())
 		}
 		if args[0] == "balance" {
-			var privateKey string
-			if len(args[1]) < 3 {
-				index, err := strconv.ParseInt(args[1], 10, 32)
-				if err != nil {
-					fmt.Println(err)
-					panic(err)
-				}
-				if index >= int64(len(privateKeys)) {
-					fmt.Println("Cannot find the private key")
-					continue
-				}
-				privateKey = privateKeys[index]
-			} else {
-				privateKey = args[1]
+			if len(args) < 2 {
+				fmt.Println("not enough param for balance")
+				continue
+			}
+			privateKey, err := ParsePrivateKey(args[1], privateKeys)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
 			balance, err := debugtool.GetBalance(privateKey, common.PRVIDStr)
@@ -399,34 +431,16 @@ func main() {
 			if len(args) < 4 {
 				fmt.Println("need at least 4 arguments.")
 			}
-			var privateKey string
-			if len(args[1]) < 3 {
-				index, err := strconv.ParseInt(args[1], 10, 32)
-				if err != nil {
-					fmt.Println(err)
-					continue
-				}
-				if index >= int64(len(privateKeys)) {
-					fmt.Println("Cannot find the private key")
-					continue
-				}
-				privateKey = privateKeys[index]
-			} else {
-				privateKey = args[1]
+			privateKey, err := ParsePrivateKey(args[1], privateKeys)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
-			var paymentAddress = args[2]
-			if len(args[2]) < 4 {
-				index, err := strconv.ParseInt(args[2], 10, 32)
-				if err != nil {
-					fmt.Println(err)
-					panic(err)
-				}
-				if index >= int64(len(privateKeys)) {
-					fmt.Println("Cannot find the private key")
-					continue
-				}
-				paymentAddress = debugtool.PrivateKeyToPaymentAddress(privateKeys[index], -1)
+			paymentAddress, err := ParsePaymentAddress(args[2], privateKeys)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
 			amount, err := strconv.ParseUint(args[3], 10, 64)
@@ -463,25 +477,22 @@ func main() {
 				fmt.Println("Not enough param for unspentouttoken")
 				continue
 			}
-			tokenID := common.PRVIDStr
-			if len(args) > 2 {
-				tokenID = args[2]
-				if len(args[2]) < 10 {
-					tokenID = tokenIDs[args[2]] //Make sure you have the right token name
-				}
+
+			privateKey, err := ParsePrivateKey(args[1], privateKeys)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
-			var privateKey string
-			if len(args[1]) < 3 {
-				index, err := strconv.ParseInt(args[1], 10, 32)
+			tokenID := common.PRVIDStr
+			if len(args) > 2 {
+				tokenID, err = ParseTokenID(args[2], tokenIDs)
 				if err != nil {
 					fmt.Println(err)
 					continue
 				}
-				privateKey = privateKeys[index]
-			} else {
-				privateKey = args[1]
 			}
+
 			bi := big.NewInt(0)
 			if len(args) >= 4 {
 				_, ok := bi.SetString(args[3], 10)
@@ -498,33 +509,19 @@ func main() {
 			if len(args) < 2 {
 				fmt.Println("need at least 2 arguments.")
 			}
-			var privateKey string
-			if len(args[1]) < 3 {
-				index, err := strconv.ParseInt(args[1], 10, 32)
-				if err != nil {
-					fmt.Println(err)
-					continue
-				}
-				if index >= int64(len(privateKeys)) {
-					fmt.Println("Cannot find the private key")
-					continue
-				}
-				privateKey = privateKeys[index]
-			} else {
-				privateKey = args[1]
+
+			privateKey, err := ParsePrivateKey(args[1], privateKeys)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
 			var tokenID = common.PRVIDStr
-			var ok bool
 			if len(args) > 2 {
-				tokenID = args[2]
-				if len(tokenID) < 10 {
-					tokenID, ok = tokenIDs[tokenID]
-					if !ok {
-						fmt.Println("cannot find tokenID")
-						fmt.Println("list of tokenIDs", tokenIDs)
-						continue
-					}
+				tokenID, err = ParseTokenID(args[2], tokenIDs)
+				if err != nil {
+					fmt.Println(err)
+					continue
 				}
 			}
 
@@ -555,20 +552,10 @@ func main() {
 				continue
 			}
 
-			var privateKey string
-			if len(args[1]) < 3 {
-				index, err := strconv.ParseInt(args[1], 10, 32)
-				if err != nil {
-					fmt.Println(err)
-					panic(err)
-				}
-				if index >= int64(len(privateKeys)) {
-					fmt.Println("Cannot find the private key")
-					continue
-				}
-				privateKey = privateKeys[index]
-			} else {
-				privateKey = args[1]
+			privateKey, err := ParsePrivateKey(args[1], privateKeys)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
 			amount, err := strconv.ParseInt(args[2], 10, 64)
@@ -601,31 +588,16 @@ func main() {
 			fmt.Printf("CreateAndSendRawTokenTransaction succeeded. TxHash: %v.\n", txHash)
 		}
 		if args[0] == "balancetoken" {
-			var privateKey string
-			if len(args[1]) < 3 {
-				index, err := strconv.ParseInt(args[1], 10, 32)
-				if err != nil {
-					fmt.Println(err)
-					panic(err)
-				}
-				if index >= int64(len(privateKeys)) {
-					fmt.Println("Cannot find the private key")
-					continue
-				}
-				privateKey = privateKeys[index]
-			} else {
-				privateKey = args[1]
+			privateKey, err := ParsePrivateKey(args[1], privateKeys)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
-			var tokenID = args[2]
-			var ok bool
-			if len(tokenID) < 10 {
-				tokenID, ok = tokenIDs[tokenID]
-				if !ok {
-					fmt.Println("cannot find tokenID")
-					fmt.Println("list of tokenIDs", tokenIDs)
-					continue
-				}
+			tokenID, err := ParseTokenID(args[2], tokenIDs)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
 			balance, err := debugtool.GetBalance(privateKey, tokenID)
@@ -641,47 +613,22 @@ func main() {
 				continue
 			}
 
-			var privateKey string
-			if len(args[1]) < 3 {
-				index, err := strconv.ParseInt(args[1], 10, 32)
-				if err != nil {
-					fmt.Println(err)
-					panic(err)
-				}
-				if index >= int64(len(privateKeys)) {
-					fmt.Println("Cannot find the private key")
-					continue
-				}
-				privateKey = privateKeys[index]
-			} else {
-				privateKey = args[1]
+			privateKey, err := ParsePrivateKey(args[1], privateKeys)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
-			var paymentAddress string
-			if len(args[2]) < 4 {
-				index, err := strconv.ParseInt(args[2], 10, 32)
-				if err != nil {
-					fmt.Println(err)
-					panic(err)
-				}
-				if index >= int64(len(privateKeys)) {
-					fmt.Println("Cannot find the private key")
-					continue
-				}
-				paymentAddress = debugtool.PrivateKeyToPaymentAddress(privateKeys[index], -1)
-			} else {
-				paymentAddress = args[2]
+			paymentAddress, err := ParsePaymentAddress(args[2], privateKeys)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
-			var tokenID = args[3]
-			var ok bool
-			if len(tokenID) < 10 {
-				tokenID, ok = tokenIDs[tokenID]
-				if !ok {
-					fmt.Println("cannot find tokenID")
-					fmt.Println("list of tokenIDs", tokenIDs)
-					continue
-				}
+			tokenID, err := ParseTokenID(args[3], tokenIDs)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
 			amount, err := strconv.ParseInt(args[4], 10, 64)
@@ -866,18 +813,16 @@ func main() {
 				continue
 			}
 
-			privateKey := args[1]
-			if len(args[1]) < 3 {
-				index, err := strconv.ParseInt(args[1], 10, 32)
-				if err != nil {
-					panic(err)
-				}
-				privateKey = privateKeys[index]
+			privateKey, err := ParsePrivateKey(args[1], privateKeys)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
-			tokenID := args[2]
-			if len(args[2]) < 10 {
-				tokenID = tokenIDs[args[2]]
+			tokenID, err := ParseTokenID(args[2], tokenIDs)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
 			amount, err := strconv.ParseInt(args[3], 10, 64)
@@ -900,23 +845,22 @@ func main() {
 				continue
 			}
 
-			privateKey := args[1]
-			if len(args[1]) < 3 {
-				index, err := strconv.ParseInt(args[1], 10, 32)
-				if err != nil {
-					panic(err)
-				}
-				privateKey = privateKeys[index]
+			privateKey, err := ParsePrivateKey(args[1], privateKeys)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
-			tokenIDToSell := args[2]
-			if len(args[2]) < 10 {
-				tokenIDToSell = tokenIDs[args[2]]
+			tokenIDToSell, err := ParseTokenID(args[2], tokenIDs)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
-			tokenIDToBuy := args[3]
-			if len(args[3]) < 10 {
-				tokenIDToBuy = tokenIDs[args[3]]
+			tokenIDToBuy, err := ParseTokenID(args[3], tokenIDs)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
 			amount, err := strconv.ParseInt(args[4], 10, 64)
@@ -939,13 +883,10 @@ func main() {
 				continue
 			}
 
-			privateKey := args[1]
-			if len(args[1]) < 3 {
-				index, err := strconv.ParseInt(args[1], 10, 32)
-				if err != nil {
-					panic(err)
-				}
-				privateKey = privateKeys[index]
+			privateKey, err := ParsePrivateKey(args[1], privateKeys)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
 			amount, err := strconv.ParseInt(args[2], 10, 32)
@@ -956,9 +897,10 @@ func main() {
 
 			tokenID := common.PRVIDStr
 			if len(args) > 3 {
-				tokenID = args[3]
-				if len(tokenID) < 10 {
-					tokenID = tokenIDs[tokenID]
+				tokenID, err = ParseTokenID(args[3], tokenIDs)
+				if err != nil {
+					fmt.Println(err)
+					continue
 				}
 			}
 
@@ -976,31 +918,22 @@ func main() {
 				continue
 			}
 
-			privateKey := args[1]
-			if len(args[1]) < 3 {
-				index, err := strconv.ParseInt(args[1], 10, 32)
-				if err != nil {
-					panic(err)
-				}
-				privateKey = privateKeys[index]
+			privateKey, err := ParsePrivateKey(args[1], privateKeys)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
-			tokenID1 := args[2]
-			if len(tokenID1) < 10 {
-				tmpTokenID, ok := tokenIDs[tokenID1]
-				if !ok {
-					fmt.Println("tokenID not found")
-				}
-				tokenID1 = tmpTokenID
+			tokenID1, err := ParseTokenID(args[2], tokenIDs)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
-			tokenID2 := args[3]
-			if len(tokenID2) < 10 {
-				tmpTokenID, ok := tokenIDs[tokenID2]
-				if !ok {
-					fmt.Println("tokenID not found")
-				}
-				tokenID2 = tmpTokenID
+			tokenID2, err := ParseTokenID(args[3], tokenIDs)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
 			sharedAmount, err := strconv.ParseInt(args[4], 10, 32)
@@ -1086,18 +1019,19 @@ func main() {
 				continue
 			}
 
-			var tokenID1 = args[1]
-			if len(tokenID1) < 10 {
-				tokenID1 = tokenIDs[tokenID1]
+			tokenID1, err := ParseTokenID(args[1], tokenIDs)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
-			var tokenID2 = args[2]
-			if len(tokenID2) < 10 {
-				tokenID2 = tokenIDs[tokenID2]
+			tokenID2, err := ParseTokenID(args[2], tokenIDs)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
 			var bHeight uint64
-			var err error
 			if len(args) > 3 {
 				tmpHeight, err := strconv.ParseInt(args[3], 10, 32)
 				if err != nil {
@@ -1149,14 +1083,16 @@ func main() {
 				continue
 			}
 
-			var tokenID1 = args[1]
-			if len(tokenID1) < 10 {
-				tokenID1 = tokenIDs[tokenID1]
+			tokenID1, err := ParseTokenID(args[1], tokenIDs)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
-			var tokenID2 = args[2]
-			if len(tokenID2) < 10 {
-				tokenID2 = tokenIDs[tokenID2]
+			tokenID2, err := ParseTokenID(args[2], tokenIDs)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
 			amount, err := strconv.ParseInt(args[3], 10, 64)
@@ -1249,20 +1185,13 @@ func main() {
 				fmt.Println("Not enough param for staking")
 				continue
 			}
-			privateKey := args[1]
-			if len(args[1]) < 3 {
-				index, err := strconv.ParseInt(args[1], 10, 32)
-				if err != nil {
-					panic(err)
-				}
-				privateKey = privateKeys[index]
-			} else if len(args[1]) < 5 {
-				privateKey, _, _ = GenKeySet([]byte(args[1]))
-				fmt.Println("Staker privateKey:", privateKey)
+			privateKey, err := ParsePrivateKey(args[1], privateKeys)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
 			autoStaking := true
-			var err error
 			if len(args) > 2 {
 				autoStaking, err = strconv.ParseBool(args[2])
 				if err != nil {
@@ -1292,16 +1221,10 @@ func main() {
 				fmt.Println("Not enough param for staking")
 				continue
 			}
-			privateKey := args[1]
-			if len(args[1]) < 3 {
-				index, err := strconv.ParseInt(args[1], 10, 32)
-				if err != nil {
-					panic(err)
-				}
-				privateKey = privateKeys[index]
-			} else if len(args[1]) < 5 {
-				privateKey, _, _ = GenKeySet([]byte(args[1]))
-				fmt.Println("Staker privateKey:", privateKey)
+			privateKey, err := ParsePrivateKey(args[1], privateKeys)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
 			var privateSeed string
@@ -1330,16 +1253,10 @@ func main() {
 				fmt.Println("Not enough param for staking")
 				continue
 			}
-			privateKey := args[1]
-			if len(args[1]) < 3 {
-				index, err := strconv.ParseInt(args[1], 10, 32)
-				if err != nil {
-					panic(err)
-				}
-				privateKey = privateKeys[index]
-			} else if len(args[1]) < 5 {
-				privateKey, _, _ = GenKeySet([]byte(args[1]))
-				fmt.Println("Staker privateKey:", privateKey)
+			privateKey, err := ParsePrivateKey(args[1], privateKeys)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
 			candidateAddr := ""
@@ -1496,35 +1413,18 @@ func main() {
 			if len(args) < 4 {
 				fmt.Println("need at least 4 arguments.")
 			}
-			var privateKey string
-			if len(args[1]) < 3 {
-				index, err := strconv.ParseInt(args[1], 10, 32)
-				if err != nil {
-					fmt.Println(err)
-					continue
-				}
-				if index >= int64(len(privateKeys)) {
-					fmt.Println("Cannot find the private key")
-					continue
-				}
-				privateKey = privateKeys[index]
-			} else {
-				privateKey = args[1]
+			privateKey, err := ParsePrivateKey(args[1], privateKeys)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
-			var paymentAddress = args[2]
-			if len(args[2]) < 4 {
-				index, err := strconv.ParseInt(args[2], 10, 32)
-				if err != nil {
-					fmt.Println(err)
-					panic(err)
-				}
-				if index >= int64(len(privateKeys)) {
-					fmt.Println("Cannot find the private key")
-					continue
-				}
-				paymentAddress = debugtool.PrivateKeyToPaymentAddress(privateKeys[index], -1)
+			paymentAddress, err := ParsePaymentAddress(args[2], privateKeys)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
+
 
 			amount, err := strconv.ParseUint(args[3], 10, 64)
 			if err != nil {
