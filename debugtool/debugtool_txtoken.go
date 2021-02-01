@@ -7,6 +7,7 @@ import (
 	"github.com/thanhn-inc/debugtool/common"
 	"github.com/thanhn-inc/debugtool/common/base58"
 	"github.com/thanhn-inc/debugtool/privacy"
+	"github.com/thanhn-inc/debugtool/privacy/coin"
 	"github.com/thanhn-inc/debugtool/rpchandler"
 	"github.com/thanhn-inc/debugtool/rpchandler/rpc"
 	"github.com/thanhn-inc/debugtool/transaction/tx_generic"
@@ -53,6 +54,14 @@ func CreateRawTokenTransactionVer1(txParam *TxParam) ([]byte, string, error) {
 	lastByteSender := senderWallet.KeySet.PaymentAddress.Pk[len(senderWallet.KeySet.PaymentAddress.Pk)-1]
 	shardID := common.GetShardIDFromLastByte(lastByteSender)
 
+	var hasTokenFee = false
+	if txParam.kvargs != nil {
+		if tmp, ok := txParam.kvargs["hasTokenFee"]; ok {
+			hasTokenFee, ok = tmp.(bool)
+		}
+	}
+
+
 	//Calculate the total transacted amount
 	totalAmount := uint64(0)
 	for _, amount := range txParam.amountList {
@@ -71,7 +80,6 @@ func CreateRawTokenTransactionVer1(txParam *TxParam) ([]byte, string, error) {
 		}
 	}
 
-	prvFee := DefaultPRVFee
 
 	hasPrivacyToken := true
 	hasPrivacyPRV := true
@@ -83,12 +91,27 @@ func CreateRawTokenTransactionVer1(txParam *TxParam) ([]byte, string, error) {
 		hasPrivacyToken = false
 	}
 
-	//Init PRV fee param
-	coinsPRVToSpend, kvargsPRV, err := InitParams(privateKey, common.PRVIDStr, prvFee, hasPrivacyPRV, 1)
-	if err != nil {
-		return nil, "", err
-	}
+	//Init PRV fee param when not paying fee by token
+	var coinsPRVToSpend []coin.PlainCoin
+	var kvargsPRV map[string]interface{}
+	prvFee := DefaultPRVFee
+	tokenFee := uint64(0)
+	if !hasTokenFee {
+		coinsPRVToSpend, kvargsPRV, err = InitParams(privateKey, common.PRVIDStr, prvFee, hasPrivacyPRV, 1)
+		if err != nil {
+			return nil, "", err
+		}
+	} else {
+		//set prv fee to 0
+		prvFee = 0
 
+		//calculate the token amount to pay transaction fee
+		tokenFee, err = GetTokenFee(shardID, tokenIDStr)
+		if err != nil {
+			return nil, "", err
+		}
+		totalAmount += tokenFee
+	}
 	//End init PRV fee param
 
 	//Init token param
@@ -104,7 +127,7 @@ func CreateRawTokenTransactionVer1(txParam *TxParam) ([]byte, string, error) {
 
 	//Create token param for transactions
 	tokenParam := tx_generic.NewTokenParam(tokenIDStr, "", "",
-			totalAmount, txParam.txTokenType, tokenReceivers, coinsTokenToSpend, false, 0, kvargsToken)
+			totalAmount, txParam.txTokenType, tokenReceivers, coinsTokenToSpend, false, tokenFee, kvargsToken)
 
 	txTokenParam := tx_generic.NewTxTokenParams(&senderWallet.KeySet.PrivateKey, []*privacy.PaymentInfo{}, coinsPRVToSpend, prvFee,
 		tokenParam, txParam.md, hasPrivacyPRV, hasPrivacyToken, shardID, nil, kvargsPRV)
@@ -276,8 +299,34 @@ func CreateRawTokenConversionTransaction(privateKey, tokenIDStr string) ([]byte,
 
 }
 
-func CreateAndSendRawTokenTransaction(privateKey string, addrList []string, amountList []uint64, version int8, tokenIDStr string, txTokenType int) (string, error) {
-	txParam := NewTxParam(privateKey, addrList, amountList, tokenIDStr, txTokenType, nil)
+func CreateAndSendRawTokenTransaction(privateKey string, addrList []string, amountList []uint64, version int8, tokenIDStr string, hasTokenFee bool) (string, error) {
+	txParam := NewTxParam(privateKey, addrList, amountList, tokenIDStr, 1, nil)
+	kvargs := make(map[string]interface{})
+	kvargs["hasTokenFee"] = hasTokenFee
+	txParam.SetKvargs(kvargs)
+
+	encodedTx, txHash, err := CreateRawTokenTransaction(txParam, version)
+	if err != nil {
+		return "", err
+	}
+
+	responseInBytes, err := rpc.SendRawTokenTx(string(encodedTx))
+	if err != nil {
+		return "", nil
+	}
+
+	fmt.Println("SendRawTokenTx:", string(responseInBytes))
+
+	_, err = rpchandler.ParseResponse(responseInBytes)
+	if err != nil {
+		return "", err
+	}
+
+	return txHash, nil
+}
+
+func CreateAndSendRawTokenInitTransaction(privateKey string, addrList []string, amountList []uint64, version int8) (string, error) {
+	txParam := NewTxParam(privateKey, addrList, amountList, "", 0, nil)
 
 	encodedTx, txHash, err := CreateRawTokenTransaction(txParam, version)
 	if err != nil {

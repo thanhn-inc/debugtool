@@ -17,14 +17,13 @@ import (
 	"sort"
 )
 
-const DefaultPRVFee = uint64(20)
+const DefaultPRVFee = uint64(10)
 
 type TxParam struct {
 	senderPrivateKey string
 	receiverList     []string
 	amountList       []uint64
 	tokenID          string
-	payFeeByToken    bool
 	txTokenType      int
 	md               metadata.Metadata
 	kvargs           map[string]interface{}
@@ -32,10 +31,6 @@ type TxParam struct {
 
 func (txParam *TxParam) SetKvargs(kvargs map[string]interface{}) {
 	txParam.kvargs = kvargs
-}
-
-func (txParam *TxParam) SetPayFeeToken(payFeeByToken bool) {
-	txParam.payFeeByToken = payFeeByToken
 }
 
 func NewTxParam(senderPrivateKey string,
@@ -324,7 +319,7 @@ func InitParams(privateKey string, tokenIDStr string, totalAmount uint64, hasPri
 		return nil, nil, err
 	}
 
-	fmt.Printf("Finish getting UTXOs for paying fee. Length of UTXOs: %v\n", len(utxoList))
+	fmt.Printf("Finish getting UTXOs for %v of %v. Length of UTXOs: %v\n", totalAmount, tokenIDStr, len(utxoList))
 	coinV1List, coinV2List, idxV2List, err := DivideCoins(utxoList, idxList, true)
 	if err != nil {
 		return nil, nil, errors.New(fmt.Sprintf("cannot divide coin: %v", err))
@@ -333,7 +328,7 @@ func InitParams(privateKey string, tokenIDStr string, totalAmount uint64, hasPri
 	var coinsToSpend []privacy.PlainCoin
 	var kvargs = make(map[string]interface{})
 	if version == 1 {
-		//Choose best coins for paying fee
+		//Choose best coins for creating transactions
 		coinsToSpend, _, err = ChooseBestCoinsByAmount(coinV1List, totalAmount)
 		if err != nil {
 			return nil, nil, err
