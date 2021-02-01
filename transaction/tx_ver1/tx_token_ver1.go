@@ -135,6 +135,7 @@ func (txToken *TxToken) Init(paramsInterface interface{}) error {
 			nil,
 			params.TokenParams.Kvargs))
 		if err != nil {
+			fmt.Printf("Init PRV fee transaction returns an error: %v\n", err)
 			return err
 		}
 	}

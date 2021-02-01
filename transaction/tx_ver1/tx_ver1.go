@@ -163,38 +163,38 @@ func (tx *Tx) initPaymentWitnessParam(params *tx_generic.TxPrivacyInitParams) (*
 	var inputCoinCommitmentIndices []uint64
 	var commitments []*privacy.Point
 
-	if params.HasPrivacy {
+	if params.HasPrivacy && len(params.InputCoins) > 0{
 		//Get list of decoy indices.
 		tmp, ok := params.Kvargs[utils.CommitmentIndices]
 		if !ok {
-			return nil, errors.New(fmt.Sprintf("decoy commitment indices not found: %v", params.Kvargs))
+			return nil, fmt.Errorf("decoy commitment indices not found: %v", params.Kvargs)
 		}
 
 		commitmentIndices, ok = tmp.([]uint64)
 		if !ok {
-			return nil, errors.New(fmt.Sprintf("cannot parse commitment indices: %v", tmp))
+			return nil,  fmt.Errorf("cannot parse commitment indices: %v", tmp)
 		}
 
 		//Get list of decoy commitments.
 		tmp, ok = params.Kvargs[utils.Commitments]
 		if !ok {
-			return nil, errors.New(fmt.Sprintf("decoy commitment list not found: %v", params.Kvargs))
+			return nil,  fmt.Errorf("decoy commitment list not found: %v", params.Kvargs)
 		}
 
 		commitments, ok = tmp.([]*privacy.Point)
 		if !ok {
-			return nil, errors.New(fmt.Sprintf("cannot parse sender commitment indices: %v", tmp))
+			return nil,   fmt.Errorf("cannot parse sender commitment indices: %v", tmp)
 		}
 
 		//Get list of inputcoin indices
 		tmp, ok = params.Kvargs[utils.MyIndices]
 		if !ok {
-			return nil, errors.New(fmt.Sprintf("inputCoin commitment indices not found: %v", params.Kvargs))
+			return nil,  fmt.Errorf("inputCoin commitment indices not found: %v", params.Kvargs)
 		}
 
 		inputCoinCommitmentIndices, ok = tmp.([]uint64)
 		if !ok {
-			return nil, errors.New(fmt.Sprintf("cannot parse inputCoin commitment indices: %v", tmp))
+			return nil,  fmt.Errorf("cannot parse inputCoin commitment indices: %v", tmp)
 		}
 	}
 
