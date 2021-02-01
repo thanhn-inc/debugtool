@@ -18,14 +18,19 @@ func CreatePDETradeTransaction(privateKey, tokenIDToSell, tokenIDToBuy string, a
 		return nil, "", err
 	}
 
+	minAccept, err := CheckPrice(tokenIDToSell, tokenIDToBuy, amount)
+	if err != nil {
+		return nil, "", err
+	}
 	addr := senderWallet.Base58CheckSerialize(wallet.PaymentAddressType)
 
 	var pdeTradeMetadata *metadata.PDETradeRequest
 	if tokenIDToSell == common.PRVIDStr || tokenIDToBuy == common.PRVIDStr {
-		pdeTradeMetadata, err = metadata.NewPDETradeRequest(tokenIDToBuy, tokenIDToSell, amount, 0, 0,
+
+		pdeTradeMetadata, err = metadata.NewPDETradeRequest(tokenIDToBuy, tokenIDToSell, amount, minAccept, 0,
 			addr, "", metadata.PDETradeRequestMeta)
 	} else {
-		pdeTradeMetadata, err = metadata.NewPDETradeRequest(tokenIDToBuy, tokenIDToSell, amount, 0, 0,
+		pdeTradeMetadata, err = metadata.NewPDETradeRequest(tokenIDToBuy, tokenIDToSell, amount, minAccept, 0,
 			addr, "", metadata.PDECrossPoolTradeRequestMeta)
 	}
 
