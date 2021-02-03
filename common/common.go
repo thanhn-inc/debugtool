@@ -241,3 +241,42 @@ func B2ImN(bytes []byte) *big.Int {
 	}
 	return x
 }
+
+
+var PortalSupportedIncTokenIDs = []string{
+	PortalBTCIDStr, // pBTC
+	PortalBNBIDStr, // pBNB
+}
+
+// set MinAmountPortalPToken to avoid attacking with amount is less than smallest unit of cryptocurrency
+// such as satoshi in BTC
+var MinAmountPortalPToken = map[string]uint64{
+	PortalBTCIDStr: 10,
+	PortalBNBIDStr: 10,
+}
+
+var (
+	EmptyRoot = HexToHash(HexEmptyRoot)
+)
+
+var EthContractAddressStr = MainETHContractAddressStr
+
+var TIMESLOT = uint64(0) //need to be set when init chain
+
+var (
+	MaxTxSize    = uint64(100)  // unit KB = 100KB
+	MaxBlockSize = uint64(2000) //unit kilobytes = 2 Megabyte
+)
+
+// special token ids (aka. PropertyID in custom token)
+var (
+	PRVCoinID             = Hash{4} // To send PRV in custom token
+	PRVCoinName           = "PRV"   // To send PRV in custom token
+	ConfidentialAssetID   = Hash{5}
+	ConfidentialAssetName = "CA"
+	MaxShardNumber        = 8 //programmatically config based on networkID
+)
+
+var SupportedTokenID map[string]string
+
+

@@ -55,20 +55,6 @@ const (
 	TxCustomTokenPrivacyType = "tp" // token  tx with supporting privacy
 )
 
-var (
-	MaxTxSize    = uint64(100)  // unit KB = 100KB
-	MaxBlockSize = uint64(2000) //unit kilobytes = 2 Megabyte
-)
-
-// special token ids (aka. PropertyID in custom token)
-var (
-	PRVCoinID             = Hash{4} // To send PRV in custom token
-	PRVCoinName           = "PRV"   // To send PRV in custom token
-	ConfidentialAssetID   = Hash{5}
-	ConfidentialAssetName = "CA"
-	MaxShardNumber        = 8 //programmatically config based on networkID
-)
-
 // CONSENSUS
 const (
 	// NodeModeRelay  = "relay"
@@ -305,17 +291,6 @@ const PortalBTCIDStr = "ef5947f70ead81a76a53c7c8b7317dd5245510c665d3a13921dc9a58
 const PortalBNBIDStr = "6abd698ea7ddd1f98b1ecaaddab5db0453b8363ff092f0d8d7d4c6b1155fb693"
 const PRVIDStr = "0000000000000000000000000000000000000000000000000000000000000004"
 
-var PortalSupportedIncTokenIDs = []string{
-	PortalBTCIDStr, // pBTC
-	PortalBNBIDStr, // pBNB
-}
-
-// set MinAmountPortalPToken to avoid attacking with amount is less than smallest unit of cryptocurrency
-// such as satoshi in BTC
-var MinAmountPortalPToken = map[string]uint64{
-	PortalBTCIDStr: 10,
-	PortalBNBIDStr: 10,
-}
 
 const ETHChainName = "eth"
 
@@ -329,16 +304,8 @@ const (
 	BurningAddress2 = "12RxahVABnAVCGP3LGwCn8jkQxgw7z1x14wztHzn455TTVpi1wBq9YGwkRMQg3J4e657AbAnCvYCJSdA9czBUNuCKwGSRQt55Xwz8WA"
 )
 
-var (
-	EmptyRoot = HexToHash(HexEmptyRoot)
-)
-
 const (
 	TestnetETHContractAddressStr  = "0xE0D5e7217c6C4bc475404b26d763fAD3F14D2b86"
 	Testnet2ETHContractAddressStr = "0x7c7e371D1e25771f2242833C1A354dCE846f3ec8"
 	MainETHContractAddressStr     = "0x97875355eF55Ae35613029df8B1C8Cf8f89c9066"
 )
-
-var EthContractAddressStr = MainETHContractAddressStr
-
-var TIMESLOT = uint64(0) //need to be set when init chain
