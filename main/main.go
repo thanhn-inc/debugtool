@@ -1329,37 +1329,29 @@ func main() {
 				continue
 			}
 
-			fmt.Println(b.BlockHash, b.BlockNumber, b.TxHash)
+			fmt.Println(b.BlockHash.String(), b.BlockNumber, b.TxHash.String())
 
 		case "shield":
-			if len(args) < 5 {
-				fmt.Println("Not enough param for pdetradeprv")
+			if len(args) < 4 {
+				fmt.Println("Not enough param for shield")
 				continue
 			}
 
-			privateKey := args[1]
-			if len(args[1]) < 3 {
-				index, err := strconv.ParseInt(args[1], 10, 32)
-				if err != nil {
-					panic(err)
-				}
-				privateKey = privateKeys[index]
-			}
-
-			tokenID := args[2]
-			if len(args[2]) < 10 {
-				tokenID = tokenIDs[args[2]]
-			}
-
-			ethTxHash := args[3]
-
-			amount, err := strconv.ParseInt(args[4], 10, 64)
+			privateKey, err := ParsePrivateKey(args[1], privateKeys)
 			if err != nil {
 				fmt.Println(err)
 				continue
 			}
 
-			txHash, err := debugtool.CreateAndSendIssuingETHRequestTransaction(privateKey, ethTxHash, tokenID, uint64(amount))
+			tokenID, err := ParseTokenID(args[2], tokenIDs)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			ethTxHash := args[3]
+
+			txHash, err := debugtool.CreateAndSendIssuingETHRequestTransaction(privateKey, ethTxHash, tokenID)
 			if err != nil {
 				fmt.Println(err)
 				continue
