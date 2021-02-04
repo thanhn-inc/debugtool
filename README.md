@@ -281,3 +281,6 @@ go run *.go
         + `cmkey 0`
         + `cmkey 112t8rnZDRztVgPjbYQiXS7mJgaTzn66NvHD7Vus2SrhSAY611AzADsPFzKjKQCKWTgbkgYrCPo9atvSMoCf9KT23Sc7Js9RKhzbNJkxpJU6`
         
+
+## Notes
+1. To use the old payment address, change the variable `b58Version` in the function `Base58CheckSerialize` to `0`.
