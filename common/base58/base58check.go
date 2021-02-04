@@ -56,7 +56,7 @@ func (self Base58Check) Encode(input []byte, version byte) string {
 	b := make([]byte, 0, 1+len(input)+common.CheckSumLen)
 	b = append(b, version)
 	b = append(b, input[:]...)
-	cksum := ChecksumFirst4Bytes(b, false)
+	cksum := ChecksumFirst4Bytes(b, version == 1)
 	b = append(b, cksum[:]...)
 	encodeData := Base58{}.Encode(b)
 	base58Cache.Add(string(input), encodeData)
