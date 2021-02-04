@@ -1,6 +1,6 @@
 # Debugtool
 <p> 
-This repo is a command-line tool which provides basic functionalities for interacting with the [Incognito](https://we.incognito.org) blockchain. Developers with deep knowledge of the Incognito network are warmly welcomed modify the source code to favor their needs.
+This repo is a command-line tool that provides basic functionalities for interacting with the [Incognito](https://we.incognito.org) blockchain. Developers with deep knowledge of the Incognito network are warmly welcomed to modify the source code to favor their needs.
 </p>
  
 ## Usage
@@ -64,7 +64,7 @@ go run *.go
         + `uot 112t8rnZDRztVgPjbYQiXS7mJgaTzn66NvHD7Vus2SrhSAY611AzADsPFzKjKQCKWTgbkgYrCPo9atvSMoCf9KT23Sc7Js9RKhzbNJkxpJU6 ETH`
          
 1. `balance`
-    - Description: get balance of a given user
+    - Description: get the balance of a given user
     - How to use: `balance PRIVATE_KEY [TOKEN_ID]`
         + PRIVATE_KEY: the private key of the user
         + TOKEN_ID (optional): the tokenID of the needed coins, default is PRV
@@ -81,7 +81,7 @@ go run *.go
         + PRIVATE_KEY: the private key of the sender
         + ADDRESS: the receiver address
         + AMOUNT: the transacted amount (unit: nano)
-        + TX_VERSION (optional): the version of the transaction (`1` or `2`), default value is `-1` (try either of the version if possible)
+        + TX_VERSION (optional): the version of the transaction (`1` or `2`), the default value is `-1` (try either of the version if possible)
     - Examples:
         + `transfer 0 1 1000000`
         + `transfer 0 1 1000000 1`
@@ -94,7 +94,7 @@ go run *.go
         + ADDRESS: the receiver address
         + TOKEN_ID: the id of the transacted asset
         + AMOUNT: the transacted amount (unit: nano)
-        + TX_VERSION (optional): the version of the transaction (`1` or `2`), default value is `-1` (try either of the version if possible)
+        + TX_VERSION (optional): the version of the transaction (`1` or `2`), the default value is `-1` (try either of the version if possible)
     - Examples:
         + `transfertoken 0 1 ETH 1000000`
         + `transfertoken 0 1 ffd8d42dc40a8d166ea4848baf8b5f6e912ad79875f4373070b59392b1756c8f 1000000 1`
@@ -255,7 +255,7 @@ go run *.go
         + `txhash 80e96c92032505a12b20fe7b15b9bf379bac903dbbc2ef4063f84d38b7f4cfc1`
         
 1. `listtoken`
-    - Description: list all tokens currently present on the blockchain environment
+    - Description: list all tokens currently present in the blockchain environment
     - How to use: `listtoken`  
 
 ### Key-related
