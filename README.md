@@ -1,7 +1,5 @@
 # Debugtool
-<p> 
 This repo is a command-line tool that provides basic functionalities for interacting with the [Incognito](https://we.incognito.org) blockchain. Developers with deep knowledge of the Incognito network are warmly welcomed to modify the source code to favor their needs.
-</p>
  
 ## Usage
 ```bash
