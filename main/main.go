@@ -461,46 +461,32 @@ func main() {
 			fmt.Println(privateKey, payment)
 
 		case "cmkey":
-			pri := []string{
-				"112t8sw2apGTwoVT2M6adwp1fQvH5KzVsns5GFFEHzLxKTYpqmVTJVCUTAzfkQDNKUondiV6MBCSk9MVDao5RRwuhdjkScMBZ42YJ3hZb6Db",
-				"112t8sw37yYFcpGhQnNLsHMbBDDSbW27t3YPMLDSK2q2ZmmZ6iSc1d1K5QkCsdsZ5L3YFaLz2R1KZzJHrAxQNefukYvc5hvKgVBFgatYaDtU",
-				"112t8sw3HuTUHxw9U7agDsiBBzoLcjd3Z4o226QzUYHL9sAdHTo82iJ4TaaKZ5ZJzU6EcquxNjGTpxW5kdfrsx1EeRD7WChepy4y4WeUhvXA",
-				"112t8sw3X7XahWjLwAjgBe51nF4AKqubXFMAFeumM5ECDr8RFH1FKoqzjRECkuXbqJDGr3sAM3qREixjtMpMgPrg63XdKBGYikiSaH89A53V",
-				"112t8sw3swjDhYme56xtqu2Zc1CsodJAekC6FL5Lj7QpV7ZY9WvnyrDQc1W3Vim74dcHFR9QZLcu9LkUpDaziTX4bF39gKMBegWVgBDn6nv4",
-				"112t8sw4G9xiRC151H5MWV4Kb1CfXAugPQuecjrnktU7W3JUVqd8LhCMa4jwiqaqnSSdNQvKRTqibA7W9tSKegn16HveZDJs1UC4GP4LiRTn",
-				"112t8sw4ZAc1wwbKog9NhE6VqpEiPii4reg8Zc5AVGu7BkxtPYv95dXRJtzP9CkepgzfUwTseNzgHXRovo9oDb8XrEpb5EgFhKdZhwjzHTbd",
-				"112t8sw4ijTH6E6gbPhCF6y36zijFfb7T1JnU8GWVSMmWMP85zzmjkoLRH4fF5HkJR8W7uqfnDQ19ARtW9mDmvCUviNNdZ3i39PDhXztjfgM",
-				"112t8sw4uNsCeamWRqU1QLiquPbBfGB7HE8qyd7YsBUjSWf3nhcRmoMfyptRDAatJNWBopRTigciNHcPVoZG3bhMKUhrvv6LSzq8FwSwNvBD",
-				"112t8sw5AggHj5K7c2gZFqnuUypfRimgLvoxHK8U6yE33wAeU1bV2DLkRVhVDHycwaM5LFwLeVLyMGBCx97FyBx3NTHimNVb9MwjP2BeSDDd",
-				"112t8sw5fAsCpef9kSYwit7deNVmwhLs64R6s2cH49rWna8yhyCybKM85sFmegtVnEarWXuaTjvVaxVEu3rDTrz7dyUQcy5m37o3LekSxAWe",
-				"112t8sw5ne46SFtGAvvhDMj31LdhJcqsTnkiSz439WJc7xtLsRDiA8uq2AYaCPhi3a56soeSBdqRSwyWSBajv89GrPsQk2svLUonNBCSvHX9",
-				"112t8sw6XHCn6jmMAfC47kvrhRVG4o1zKBA41wxfb53S3tHXLZNyWKZWSgSHnEPAHKyEvvho3b4oKLxfNka5LJttkmmYpzq2Wccn6ohvjvKN",
+			if len(args) < 2 {
+				fmt.Printf("not enough param for %v\n", args[1])
+				continue
 			}
 
-			se := []string{
-				"12kkr7NxhnekKKBcn9RNgR31gy6LxqiX51eoexvPQpToGdxm28k",
-				"12RpaScwxD4xEC5et5UrkStSjTSTd6djFXT52B8M5U8v23bZ9yK",
-				"1aJCk2HxULpcBADDZu7BxZBivTqMJB4kSAyVJeuJNaBCxTfJ1A",
-				"1CvVLnKzeWZWGrijrHBo9b5PPy77scgcGhuyPdz6aWGVU9qkji",
-				"1e2571JcwDa6nxfW66FSA9NpRpvcMowbU1M7vTXvUR6WJa6AjJ",
-				"1eZt6YvHHhiKYBJrCpNj4KnkVNBn46bk11MgokpWYBaPssdBCU",
-				"15KssSyWEX3Jw49ktvFFH9rhZfiGhCrqB3KXWFTG2WzSmqD9AS",
-				"1cJ6MDSA1mSHezUrgvYDE4F1zvR6V3WviArYJUr8NWQmJzHaQN",
-				"1tN2rcueWU4xaZJMNvn7XHk1ybSqeDKhzbr1G8c4v8nZLnnqQ2",
-				"1qjRfdYhLaZS5SETLiEaEod3D8dwJpTRPQGN87gyUrt1G9PEWM",
-				"12cyENYgnbvBr8xgR7BayWWoZtVXeHGXhY4vhivzf7MuXxBY465",
-				"1zHp2owSB8DfeUAGxmL1DhVoiuqcbN3ZtPtLrXYSZWqKLNqr38",
-				"1297Jr4CNbE54Ayg5p9Yf1JPEL5ynP1MCnTvKg7vREU14XUU9Gg",
+			privateKey, err := ParsePrivateKey(args[1], privateKeys)
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 
-			for i, priKey := range pri {
-				cmkey, err := GenerateCommitteeKey(priKey, se[i])
-				if err != nil {
-					fmt.Println(err)
-				}
-
-				fmt.Println(cmkey)
+			var privateSeed string
+			privateSeed, ok := privateSeeds[privateKey]
+			if !ok {
+				privateSeedBytes := privacy.HashToScalar([]byte(privateKey)).ToBytesS()
+				privateSeed = base58.Base58Check{}.Encode(privateSeedBytes, common.ZeroByte)
+				privateSeeds[privateKey] = privateSeed
+				fmt.Println("privateSeed", privateSeed)
 			}
+
+			cmKey, err := GenerateCommitteeKey(privateKey, privateSeed)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			fmt.Println(cmKey)
 
 		//BLOCKCHAIN
 		case "info":
