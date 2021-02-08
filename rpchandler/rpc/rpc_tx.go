@@ -262,3 +262,26 @@ func SendRawTokenTx(encodedTx string) ([]byte, error) {
 	return rpchandler.Server.SendPostRequestWithQuery(string(query))
 }
 
+// Get the whole result of rpc call 'gettransactionbyhash'
+func GetTransactionBySerialNumber(snList []string, tokenID string, shardID byte) ([]byte, error) {
+	if len(rpchandler.Server.GetURL()) == 0 {
+		return []byte{}, errors.New("Server has not set mainnet or testnet")
+	}
+	method := gettransactionbyserialnumber
+	params := make([]interface{}, 0)
+
+	paramList := make(map[string]interface{})
+	paramList["SerialNumbers"] = snList
+	paramList["TokenID"] = tokenID
+	paramList["ShardID"] = shardID
+
+	params = append(params, paramList)
+
+	request := rpchandler.CreateJsonRequest("1.0", method, params, 1)
+	query, err := json.Marshal(request)
+	if err != nil {
+		return nil, err
+	}
+
+	return rpchandler.Server.SendPostRequestWithQuery(string(query))
+}

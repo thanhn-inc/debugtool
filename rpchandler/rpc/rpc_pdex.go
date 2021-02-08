@@ -203,6 +203,23 @@ func PDETradeToken(privKeyStr, sellToken, amount string) ([]byte, error) {
 	return rpchandler.Server.SendPostRequestWithQuery(query)
 }
 
+func CheckTradeStatus(txHash string) ([]byte, error) {
+	method := getPDETradeStatus
+	mapParam := make(map[string]interface{})
+	mapParam["TxRequestIDStr"] = txHash
+
+	params := make([]interface{}, 0)
+	params = append(params, mapParam)
+
+	request := rpchandler.CreateJsonRequest("1.0", method, params, 1)
+	query, err := json.Marshal(request)
+	if err != nil {
+		return nil, err
+	}
+
+	return rpchandler.Server.SendPostRequestWithQuery(string(query))
+}
+
 func GetPDEState(beaconHeight uint64) ([]byte, error){
 	query := fmt.Sprintf(`{
     "id": 1,
