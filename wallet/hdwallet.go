@@ -342,7 +342,7 @@ func ComparePaymentAddresses(addr1, addr2 string) (bool, error) {
 }
 
 func GenRandomWalletForShardID(shardID byte) (*KeyWallet, error) {
-	numTries := 1000
+	numTries := 100000
 	for numTries > 0 {
 		tmpWallet, err := NewMasterKey(common.RandBytes(32))
 		if err != nil {
@@ -359,5 +359,5 @@ func GenRandomWalletForShardID(shardID byte) (*KeyWallet, error) {
 		numTries--
 	}
 
-	return nil, fmt.Errorf("failed after 100 tries")
+	return nil, fmt.Errorf("failed after % tries", numTries)
 }
