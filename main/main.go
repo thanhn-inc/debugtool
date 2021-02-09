@@ -130,8 +130,9 @@ func main() {
 			fmt.Println("CreateAndSendRawTransaction succeeded. Txhash:", txHash)
 
 		case "outcoin":
-			if len(args) < 3 {
+			if len(args) < 2 {
 				fmt.Println("not enough param for outcoin")
+				continue
 			}
 
 			privateKey, err := ParsePrivateKey(args[1], privateKeys)
@@ -140,25 +141,20 @@ func main() {
 				continue
 			}
 
-			bHeight, err := strconv.ParseInt(args[2], 10, 32)
-			if err != nil {
-				fmt.Println(err)
-				continue
-			}
-			if bHeight < 0 {
-				fmt.Printf("start beacon height should be greater than 0, have %v\n", bHeight)
-			}
-
-			tokenID := common.PRVIDStr
-			if len(args) > 3 {
-				tokenID, err = ParseTokenID(args[3])
+			var bHeight uint64
+			if len(args) > 2 {
+				tmpHeight, err := strconv.ParseInt(args[2], 10, 32)
 				if err != nil {
-					fmt.Println(err)
+					fmt.Println("cannot get beacon height", err)
 					continue
 				}
+
+				bHeight = uint64(tmpHeight)
+			} else { //retrieve from the beginning
+				bHeight = uint64(0)
 			}
 
-			GetTXOs(privateKey, tokenID, uint64(bHeight))
+			GetTXOs(privateKey, common.PRVIDStr, bHeight)
 
 		case "balance":
 			if len(args) < 2 {
@@ -172,7 +168,7 @@ func main() {
 			}
 
 			tokenID := common.PRVIDStr
-			if len(args) > 2 {//Check balance token
+			if len(args) > 2 { //Check balance token
 				tokenID, err = ParseTokenID(args[2])
 				if err != nil {
 					fmt.Println(err)
@@ -402,6 +398,39 @@ func main() {
 
 			fmt.Printf("CreateAndSendRawTokenTransaction succeeded. TxHash: %v.\n", txHash)
 
+		case "outtoken":
+			if len(args) < 3 {
+				fmt.Println("not enough param for outtoken")
+				continue
+			}
+
+			privateKey, err := ParsePrivateKey(args[1], privateKeys)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			tokenID, err := ParseTokenID(args[2])
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			var bHeight uint64
+			if len(args) > 3 {
+				tmpHeight, err := strconv.ParseInt(args[3], 10, 32)
+				if err != nil {
+					fmt.Println("cannot get beacon height", err)
+					continue
+				}
+
+				bHeight = uint64(tmpHeight)
+			} else { //retrieve from the beginning
+				bHeight = uint64(0)
+			}
+
+			GetTXOs(privateKey, tokenID, bHeight)
+
 		case "listtoken":
 			ListTokens()
 
@@ -427,7 +456,7 @@ func main() {
 			}
 
 			var keyType = int64(-1)
-			if len(args) > 3 {
+			if len(args) > 2 {
 				keyType, err = strconv.ParseInt(args[2], 10, 32)
 				if err != nil {
 					fmt.Println(err)
@@ -455,6 +484,26 @@ func main() {
 			pubKeyBytes := debugtool.PrivateKeyToPublicKey(privateKey)
 			pubKeyStr := base58.Base58Check{}.Encode(pubKeyBytes, 0x00)
 			fmt.Println("Public Key", pubKeyBytes, pubKeyStr)
+
+		case "ota":
+			var privateKey string
+			if len(args[1]) < 3 {
+				index, err := strconv.ParseInt(args[1], 10, 32)
+				if err != nil {
+					fmt.Println(err)
+					panic(err)
+				}
+				if index >= int64(len(privateKeys)) {
+					fmt.Println("Cannot find the private key")
+					continue
+				}
+				privateKey = privateKeys[index]
+			} else {
+				privateKey = args[1]
+			}
+
+			privateOTAKey := debugtool.PrivateKeyToPrivateOTAKey(privateKey)
+			fmt.Println("PrivateOTA Key", privateOTAKey)
 
 		case "genkeyset":
 			privateKey, payment, _ := GenKeySet([]byte(args[1]))
@@ -488,6 +537,21 @@ func main() {
 			}
 			fmt.Println(cmKey)
 
+		case "sub":
+			privateKey, err := ParsePrivateKey(args[1], privateKeys)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			b, err := rpc.SubmitKey(privateKey)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			fmt.Println(string(b))
+
 		//BLOCKCHAIN
 		case "info":
 			GetBlockchainInfo()
@@ -505,7 +569,15 @@ func main() {
 			fmt.Println(res)
 
 		case "mempool":
-			GetRawMempool()
+			if len(args) > 1 {
+				for {
+					GetRawMempool()
+					time.Sleep(5 * time.Second)
+					fmt.Println("")
+				}
+			} else {
+				GetRawMempool()
+			}
 
 		case "txhash":
 			GetTxByHash(args[1])
@@ -612,7 +684,7 @@ func main() {
 				continue
 			}
 
-			amount, err := strconv.ParseInt(args[2], 10, 32)
+			amount, err := strconv.ParseInt(args[2], 10, 64)
 			if err != nil {
 				fmt.Println(err)
 				continue
@@ -898,6 +970,18 @@ func main() {
 				continue
 			}
 			fmt.Println(token, value)
+
+		case "tradestatus":
+			if len(args) < 2 {
+				fmt.Println("not enough param for beststable")
+			}
+
+			b, err := rpc.CheckTradeStatus(args[1])
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			fmt.Println(string(b))
 
 		//STAKING
 		case "staking":
