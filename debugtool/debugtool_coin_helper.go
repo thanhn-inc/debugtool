@@ -6,6 +6,7 @@ import (
 	"github.com/thanhn-inc/debugtool/common"
 	"github.com/thanhn-inc/debugtool/common/base58"
 	"github.com/thanhn-inc/debugtool/privacy/coin"
+	"github.com/thanhn-inc/debugtool/privacy/key"
 	"github.com/thanhn-inc/debugtool/rpchandler"
 	"github.com/thanhn-inc/debugtool/rpchandler/jsonresult"
 	"github.com/thanhn-inc/debugtool/rpchandler/rpc"
@@ -128,4 +129,22 @@ func GetListDecryptedCoins(privateKey string, listOutputCoins []jsonresult.ICoin
 	}
 
 	return listDecyptedOutCoins, listKeyImages, nil
+}
+
+func GenerateOTAFromPaymentAddress(paymentAddressStr string) (string, string, error) {
+	keyWallet, err := wallet.Base58CheckDeserialize(paymentAddressStr)
+	if err != nil {
+		return "", "", err
+	}
+
+	paymentInfo := key.InitPaymentInfo(keyWallet.KeySet.PaymentAddress, 0, []byte{})
+	otaCoin, err := coin.NewCoinFromPaymentInfo(paymentInfo)
+	if err != nil {
+		return "", "", err
+	}
+
+	pubKey := otaCoin.GetPublicKey()
+	txRandom := otaCoin.GetTxRandom()
+
+	return base58.Base58Check{}.Encode(pubKey.ToBytesS(), common.ZeroByte), base58.Base58Check{}.Encode(txRandom.Bytes(), common.ZeroByte), nil
 }
