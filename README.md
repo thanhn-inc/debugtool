@@ -41,19 +41,20 @@ go run *.go
 
 ### TXO-related
 1. `outcoin`
-    - Description: get the list of output coins (TXOs) for a given user
-    - How to use: `outcoin PRIVATE_KEY [TOKEN_ID]`
-        + PRIVATE_KEY: the private key of the user
-        + TOKEN_ID (optional): the tokenID of the needed coins, default is PRV
+    - Description: get the list of PRV output coins (TXOs) for a given user
+    - How to use: `outcoin PRIVATE_KEY [BEACON_HEIGHT]`
+        + PRIVATE_KEY: the private key of the user (index or full string)
+        + BEACON_HEIGHT (optional): the beacon height at which you want to retrieve the output coins, default is `0`
     - Examples:
         + `outcoin 0`
-        + `outcoin 0 ffd8d42dc40a8d166ea4848baf8b5f6e912ad79875f4373070b59392b1756c8f`
+        + `outcoin 0 1000`
         + `outcoin 112t8rnZDRztVgPjbYQiXS7mJgaTzn66NvHD7Vus2SrhSAY611AzADsPFzKjKQCKWTgbkgYrCPo9atvSMoCf9KT23Sc7Js9RKhzbNJkxpJU6`
-        + `outcoin 112t8rnZDRztVgPjbYQiXS7mJgaTzn66NvHD7Vus2SrhSAY611AzADsPFzKjKQCKWTgbkgYrCPo9atvSMoCf9KT23Sc7Js9RKhzbNJkxpJU6 ETH`  
+        + `outcoin 112t8rnZDRztVgPjbYQiXS7mJgaTzn66NvHD7Vus2SrhSAY611AzADsPFzKjKQCKWTgbkgYrCPo9atvSMoCf9KT23Sc7Js9RKhzbNJkxpJU6 1000`  
+
 1. `uot`
     - Description: get the list of unspent output coin (UTXOs) of a given user
     - How to use: `uot PRIVATE_KEY [TOKEN_ID]`
-        + PRIVATE_KEY: the private key of the user
+        + PRIVATE_KEY: the private key of the user (index or full string)
         + TOKEN_ID (optional): the tokenID of the needed coins, default is `PRV`
     - Examples:
         + `uot 0`
@@ -64,8 +65,8 @@ go run *.go
 1. `balance`
     - Description: get the balance of a given user
     - How to use: `balance PRIVATE_KEY [TOKEN_ID]`
-        + PRIVATE_KEY: the private key of the user
-        + TOKEN_ID (optional): the tokenID of the needed coins, default is PRV
+        + PRIVATE_KEY: the private key of the user (index or full string)
+        + TOKEN_ID (optional): the id of the needed coins, default is PRV
     - Examples:
         + `balance 0`
         + `balance 0 ffd8d42dc40a8d166ea4848baf8b5f6e912ad79875f4373070b59392b1756c8f`
@@ -76,7 +77,7 @@ go run *.go
 1. `transfer`
     - Description: perform a PRV transferring transaction
     - How to use: `transfer PRIVATE_KEY ADDRESS AMOUNT [TX_VERSION]`
-        + PRIVATE_KEY: the private key of the sender
+        + PRIVATE_KEY: the private key of the user (index or full string)
         + ADDRESS: the receiver address
         + AMOUNT: the transacted amount (unit: nano)
         + TX_VERSION (optional): the version of the transaction (`1` or `2`), the default value is `-1` (try either of the version if possible)
@@ -88,7 +89,7 @@ go run *.go
 1. `transfertoken`
     - Description: perform a token transferring transaction
     - How to use: `transfertoken PRIVATE_KEY ADDRESS TOKEN_ID AMOUNT [TX_VERSION]`
-        + PRIVATE_KEY: the private key of the sender
+        + PRIVATE_KEY: the private key of the user (index or full string)
         + ADDRESS: the receiver address
         + TOKEN_ID: the id of the transacted asset
         + AMOUNT: the transacted amount (unit: nano)
@@ -98,10 +99,22 @@ go run *.go
         + `transfertoken 0 1 ffd8d42dc40a8d166ea4848baf8b5f6e912ad79875f4373070b59392b1756c8f 1000000 1`
         + `transfertoken 112t8rnZDRztVgPjbYQiXS7mJgaTzn66NvHD7Vus2SrhSAY611AzADsPFzKjKQCKWTgbkgYrCPo9atvSMoCf9KT23Sc7Js9RKhzbNJkxpJU6 12S5Lrs1XeQLbqN4ySyKtjAjd2d7sBP2tjFijzmp6avrrkQCNFMpkXm3FPzj2Wcu2ZNqJEmh9JriVuRErVwhuQnLmWSaggobEWsBEci ffd8d42dc40a8d166ea4848baf8b5f6e912ad79875f4373070b59392b1756c8f 1000000`
 
+1. `outtoken`
+    - Description: get the list of output tokens for a given user
+    - How to use: `outtoken PRIVATE_KEY TOKEN_ID [BEACON_HEIGHT]`
+        + PRIVATE_KEY: the private key of the user (index or full string)
+        + TOKEN_ID: the id of the needed coins
+        + BEACON_HEIGHT (optional): the beacon height at which you want to retrieve the output coins, default is `0`
+    - Examples:
+        + `outtoken 0 ETH`
+        + `outtoken 0 ETH 1000`
+        + `outtoken 112t8rnZDRztVgPjbYQiXS7mJgaTzn66NvHD7Vus2SrhSAY611AzADsPFzKjKQCKWTgbkgYrCPo9atvSMoCf9KT23Sc7Js9RKhzbNJkxpJU6 ETH`
+        + `outtoken 112t8rnZDRztVgPjbYQiXS7mJgaTzn66NvHD7Vus2SrhSAY611AzADsPFzKjKQCKWTgbkgYrCPo9atvSMoCf9KT23Sc7Js9RKhzbNJkxpJU6 ETH 1000`  
+
 1. `convert`
     - Description: convert all UTXOs version 1 to a UTXO version 2
     - How to use: `convert PRIVATE_KEY [TOKEN_ID]`
-        + PRIVATE_KEY: the private key of the sender
+        + PRIVATE_KEY: the private key of the user (index or full string)
         + TOKEN_ID (optional): the id of the transacted asset, default is `PRV`
     - Examples:
         + `convert 0`
@@ -112,7 +125,7 @@ go run *.go
 1. `pdetradeprv`
     - Description: perform a PRV trading transaction
     - How to use: `pdetradeprv PRIVATE_KEY TOKEN_TO_BUY AMOUNT`
-        + PRIVATE_KEY: the private key of the sender
+        + PRIVATE_KEY: the private key of the user (index or full string)
         + TOKEN_TO_BUY: the id of the token being traded to
         + AMOUNT: the PRV selling amount
     - Examples:
@@ -123,7 +136,7 @@ go run *.go
 1. `pdetradetoken`
     - Description: perform a token trading transaction
     - How to use: `pdetradetoken PRIVATE_KEY TOKEN_TO_SELL TOKEN_TO_BUY AMOUNT`
-        + PRIVATE_KEY: the private key of the sender
+        + PRIVATE_KEY: the private key of the user (index or full string)
         + TOKEN_TO_SELL: the id of the token being traded from
         + TOKEN_TO_BUY: the id of the token being traded to
         + AMOUNT: the selling amount
@@ -134,7 +147,7 @@ go run *.go
 1. `pdecontribute`
     - Description: contribute PRV or tokens to the current pDEX
     - How to use: `pdecontribute PRIVATE_KEY AMOUNT [TOKEN_ID]`
-        + PRIVATE_KEY: the private key of the sender
+        + PRIVATE_KEY: the private key of the user (index or full string)
         + AMOUNT: the contributed amount
         + TOKEN_ID (optional): the id of the transacted asset, default is `PRV`
     - Examples:
@@ -144,7 +157,7 @@ go run *.go
 1. `pdewithdraw`
     - Description: contribute PRV or tokens to the current pDEX
     - How to use: `pdewithdraw PRIVATE_KEY TOKEN_ID1 TOKEN_ID2 SHARED_AMOUNT`
-        + PRIVATE_KEY: the private key of the sender
+        + PRIVATE_KEY: the private key of the user (index or full string)
         + TOKEN_ID1: the id of the first asset (any order is acceptable)
         + TOKEN_ID2: the id of the second asset (any order is acceptable)
         + SHARED_AMOUNT: the shared amount in need of withdrawing
@@ -187,12 +200,19 @@ go run *.go
     - Examples:
         + `checkprice PRV ETH 100000`
         + `checkprice ETH BTC 100000`
+        
+1. `tradestatus`
+    - Description: check the status of a given trade transaction
+    - How to use: `tradestatus TX_HASH`
+        + TX_HASH: the transaction id
+    - Examples:
+        + `tradestatus 80e96c92032505a12b20fe7b15b9bf379bac903dbbc2ef4063f84d38b7f4cfc1`
 
 ### Staking-related
 1. `staking`
     - Description: perform a staking transaction
     - How to use: `staking PRIVATE_KEY [IS_AUTO_RESTAKING]`
-        + PRIVATE_KEY: the private key of the sender
+        + PRIVATE_KEY: the private key of the user (index or full string)
         + IS_AUTO_RESTAKING (optional): indicate whether you want to automatically re-stake after swapped, default is `true`
     - Examples:
         + `staking 0`
@@ -201,7 +221,7 @@ go run *.go
 1. `unstaking`
     - Description: perform an un-staking transaction
     - How to use: `unstaking PRIVATE_KEY [ADDR]`
-        + PRIVATE_KEY: the private key of the sender
+        + PRIVATE_KEY: the private key of the user (index or full string)
         + ADDR (optional): the committee candidate payment address supplied when staking, default is the address associated with the `PRIVATE_KEY`
     - Examples:
         + `unstaking 0`
@@ -210,7 +230,7 @@ go run *.go
 1. `reward`
     - Description: withdraw the reward of a given user
     - How to use: `reward PRIVATE_KEY [ADDR]`
-        + PRIVATE_KEY: the private key of the sender
+        + PRIVATE_KEY: the private key of the user (index or full string)
         + ADDR (optional): the reward-receiving payment address supplied when staking, default is the address associated with the `PRIVATE_KEY`
     - Examples:
         + `reward 0`
@@ -260,7 +280,7 @@ go run *.go
 1. `payment`
     - Description: get the payment address from the private key
     - How to use: `payment PRIVATE_KEY`
-        + PRIVATE_KEY: the private key of the user
+        + PRIVATE_KEY: the private key of the user (index or full string)
     - Examples:
         + `payment 0`
         + `payment 112t8rnZDRztVgPjbYQiXS7mJgaTzn66NvHD7Vus2SrhSAY611AzADsPFzKjKQCKWTgbkgYrCPo9atvSMoCf9KT23Sc7Js9RKhzbNJkxpJU6`
@@ -268,15 +288,31 @@ go run *.go
 1. `public`
     - Description: get the public key from the private key
     - How to use: `public PRIVATE_KEY`
-        + PRIVATE_KEY: the private key of the user
+        + PRIVATE_KEY: the private key of the user (index or full string)
     - Examples:
         + `public 0`
         + `public 112t8rnZDRztVgPjbYQiXS7mJgaTzn66NvHD7Vus2SrhSAY611AzADsPFzKjKQCKWTgbkgYrCPo9atvSMoCf9KT23Sc7Js9RKhzbNJkxpJU6`
 
+1. `ota`
+    - Description: get the privateOTA key from the private key
+    - How to use: `ota PRIVATE_KEY`
+        + PRIVATE_KEY: the private key of the user (index or full string)
+    - Examples:
+        + `ota 0`
+        + `ota 112t8rnZDRztVgPjbYQiXS7mJgaTzn66NvHD7Vus2SrhSAY611AzADsPFzKjKQCKWTgbkgYrCPo9atvSMoCf9KT23Sc7Js9RKhzbNJkxpJU6`
+
+1. `sub`
+    - Description: submit the privateOTA key for full-node indexing
+    - How to use: `sub PRIVATE_KEY`
+        + PRIVATE_KEY: the private key of the user (index or full string)
+    - Examples:
+        + `sub 0`
+        + `sub 112t8rnZDRztVgPjbYQiXS7mJgaTzn66NvHD7Vus2SrhSAY611AzADsPFzKjKQCKWTgbkgYrCPo9atvSMoCf9KT23Sc7Js9RKhzbNJkxpJU6`
+
 1. `cmkey`
     - Description: generate a committee key from a private key
     - How to use: `cmkey PRIVATE_KEY`
-        + PRIVATE_KEY: the private key of the user
+        + PRIVATE_KEY: the private key of the user (index or full string)
     - Examples:
         + `cmkey 0`
         + `cmkey 112t8rnZDRztVgPjbYQiXS7mJgaTzn66NvHD7Vus2SrhSAY611AzADsPFzKjKQCKWTgbkgYrCPo9atvSMoCf9KT23Sc7Js9RKhzbNJkxpJU6`
