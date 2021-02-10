@@ -12,13 +12,33 @@ import (
 	"github.com/thanhn-inc/debugtool/wallet"
 )
 
-func CreatePDETradeTransaction(privateKey, tokenIDToSell, tokenIDToBuy string, amount uint64) ([]byte, string, error) {
+func CreatePDETradeTransaction(privateKey, tokenIDToSell, tokenIDToBuy string, amount uint64, version int8) ([]byte, string, error) {
+	if version == 2 {
+		return CreatePDETradeTransactionVer2(privateKey, tokenIDToSell, tokenIDToBuy, amount)
+	} else if version == 1{
+		return CreatePDETradeTransactionVer1(privateKey, tokenIDToSell, tokenIDToBuy, amount)
+	} else {//Try either one of the version, if possible
+		encodedTx, txHash, err := CreatePDETradeTransactionVer1(privateKey, tokenIDToSell, tokenIDToBuy, amount)
+		if err != nil {
+			fmt.Println("CreatePDETradeTransactionVer1 error:", err)
+			encodedTx, txHash, err1 := CreatePDETradeTransactionVer2(privateKey, tokenIDToSell, tokenIDToBuy, amount)
+			if err1 != nil {
+				return nil, "", errors.New(fmt.Sprintf("cannot create raw pdetradetransaction for either version: %v, %v", err, err1))
+			}
+			return encodedTx, txHash, nil
+		}
+		return encodedTx, txHash, nil
+	}
+}
+func CreatePDETradeTransactionVer1(privateKey, tokenIDToSell, tokenIDToBuy string, amount uint64) ([]byte, string, error) {
 	senderWallet, err := wallet.Base58CheckDeserialize(privateKey)
 	if err != nil {
 		return nil, "", err
 	}
 
-	minAccept, err := CheckPrice(tokenIDToSell, tokenIDToBuy, amount)
+	minAccept := uint64(1)
+	//uncomment this code if you want to get the best price
+	minAccept, err = CheckPrice(tokenIDToSell, tokenIDToBuy, amount)
 	if err != nil {
 		return nil, "", err
 	}
@@ -26,29 +46,67 @@ func CreatePDETradeTransaction(privateKey, tokenIDToSell, tokenIDToBuy string, a
 
 	var pdeTradeMetadata *metadata.PDETradeRequest
 	if tokenIDToSell == common.PRVIDStr || tokenIDToBuy == common.PRVIDStr {
-
 		pdeTradeMetadata, err = metadata.NewPDETradeRequest(tokenIDToBuy, tokenIDToSell, amount, minAccept, 0,
 			addr, "", metadata.PDETradeRequestMeta)
 	} else {
 		pdeTradeMetadata, err = metadata.NewPDETradeRequest(tokenIDToBuy, tokenIDToSell, amount, minAccept, 0,
 			addr, "", metadata.PDECrossPoolTradeRequestMeta)
 	}
-
 	if err != nil {
 		return nil, "", errors.New(fmt.Sprintf("cannot init trade request for %v to %v with amount %v: %v", tokenIDToSell, tokenIDToBuy, amount, err))
 	}
 
 	txParam := NewTxParam(privateKey, []string{common.BurningAddress2}, []uint64{amount}, tokenIDToSell, 1, pdeTradeMetadata)
-
 	if tokenIDToSell == common.PRVIDStr {
-		return CreateRawTransaction(txParam, -1)
+		return CreateRawTransaction(txParam, 1)
 	} else {
-		return CreateRawTokenTransaction(txParam, -1)
+		//Trade token will use token to pay fee (in case of txtokenver1)
+		kvargs := make(map[string]interface{})
+		kvargs["hasTokenFee"] = true
+		txParam.SetKvargs(kvargs)
+		return CreateRawTokenTransaction(txParam, 1)
+	}
+}
+func CreatePDETradeTransactionVer2(privateKey, tokenIDToSell, tokenIDToBuy string, amount uint64) ([]byte, string, error) {
+	senderWallet, err := wallet.Base58CheckDeserialize(privateKey)
+	if err != nil {
+		return nil, "", err
+	}
+
+	minAccept := uint64(1)
+	////uncomment this code if you want to get the best price
+	//minAccept, err = CheckPrice(tokenIDToSell, tokenIDToBuy, amount)
+	//if err != nil {
+	//	return nil, "", err
+	//}
+	addr := senderWallet.Base58CheckSerialize(wallet.PaymentAddressType)
+	pubKeyStr, txRandomStr, err := GenerateOTAFromPaymentAddress(addr)
+	if err != nil {
+		return nil, "", err
+	}
+
+	var pdeTradeMetadata *metadata.PDETradeRequest
+	if tokenIDToSell == common.PRVIDStr || tokenIDToBuy == common.PRVIDStr {
+		pdeTradeMetadata, err = metadata.NewPDETradeRequest(tokenIDToBuy, tokenIDToSell, amount, minAccept, 0,
+			pubKeyStr, txRandomStr, metadata.PDETradeRequestMeta)
+	} else {
+		pdeTradeMetadata, err = metadata.NewPDETradeRequest(tokenIDToBuy, tokenIDToSell, amount, minAccept, 0,
+			pubKeyStr, txRandomStr, metadata.PDECrossPoolTradeRequestMeta)
+	}
+	if err != nil {
+		return nil, "", errors.New(fmt.Sprintf("cannot init trade request for %v to %v with amount %v: %v", tokenIDToSell, tokenIDToBuy, amount, err))
+	}
+
+	txParam := NewTxParam(privateKey, []string{common.BurningAddress2}, []uint64{amount}, tokenIDToSell, 1, pdeTradeMetadata)
+	if tokenIDToSell == common.PRVIDStr {
+		return CreateRawTransaction(txParam, 2)
+	} else {
+		return CreateRawTokenTransaction(txParam, 2)
 	}
 
 }
 func CreateAndSendPDETradeTransaction(privateKey, tokenIDToSell, tokenIDToBuy string, amount uint64) (string, error) {
-	encodedTx, txHash, err := CreatePDETradeTransaction(privateKey, tokenIDToSell, tokenIDToBuy, amount)
+	encodedTx, txHash, err := CreatePDETradeTransaction(privateKey, tokenIDToSell, tokenIDToBuy, amount, -1)
 	if err != nil {
 		return "", err
 	}
@@ -71,6 +129,52 @@ func CreateAndSendPDETradeTransaction(privateKey, tokenIDToSell, tokenIDToBuy st
 	if err != nil {
 		return "", err
 	}
+
+	//fmt.Printf("CreateAndSendPDETradeTransaction succeeded: %v\n", txHash)
+
+	////Checking if the tokenToBuy has been received
+	//start := time.Now()
+	//oldBalance, err := GetBalance(privateKey, tokenIDToSell)
+	//if err != nil {
+	//	return txHash, err
+	//}
+	//for {
+	//	isInBlock, err := CheckTxInBlock(txHash)
+	//	if err != nil {
+	//		return txHash, err
+	//	}
+	//	if !isInBlock {
+	//		if time.Since(start).Seconds() > 900 {
+	//			fmt.Println("Abort because of timeout")
+	//			return txHash, fmt.Errorf("abort because of timeout")
+	//		} else {
+	//			fmt.Println("sleep 10 seconds...")
+	//			time.Sleep(10 * time.Second)
+	//		}
+	//	} else {
+	//		fmt.Println("start checking balance tokenToBuy...")
+	//		for {
+	//			newBalance, err := GetBalance(privateKey, tokenIDToBuy)
+	//			if err != nil {
+	//				return txHash, err
+	//			}
+	//
+	//			if newBalance - oldBalance > 0 {
+	//				fmt.Printf("balance updated: %v\n", newBalance)
+	//				break
+	//			} else {
+	//				if time.Since(start).Seconds() > 900 {
+	//					fmt.Println("Abort because of timeout")
+	//					return txHash, fmt.Errorf("abort because of timeout")
+	//				} else {
+	//					fmt.Println("sleep 10 seconds for checking balance...")
+	//					time.Sleep(10 * time.Second)
+	//				}
+	//			}
+	//		}
+	//		break
+	//	}
+	//}
 
 	return txHash, nil
 }

@@ -75,7 +75,7 @@ func AutoTrade(privateKey, tokenToSell, tokenToBuy string, amount uint64, expect
 		}
 
 		rate := float64(expectedReceive)/ float64(amount)
-		fmt.Printf("trade %v of %v ==> get %v of %v ==> rate: %v", amount, tokenToSell, expectedReceive, tokenToBuy, rate)
+		fmt.Printf("trade %v of %v ==> get %v of %v ==> rate: %v, expected rate: %v\n", amount, tokenToSell, expectedReceive, tokenToBuy, rate, expectedRate)
 		if rate >= expectedRate {
 			return CreateAndSendPDETradeTransaction(privateKey, tokenToSell, tokenToBuy, amount)
 		} else {
