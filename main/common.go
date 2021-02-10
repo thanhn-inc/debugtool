@@ -12,6 +12,7 @@ import (
 	"github.com/thanhn-inc/debugtool/rpchandler/rpc"
 	"github.com/thanhn-inc/debugtool/wallet"
 	"strconv"
+	"time"
 )
 
 var mainNetTokenIDs = map[string]string {
@@ -123,10 +124,17 @@ func GetBestBlock() {
 	fmt.Println("========== END GET BEST BLOCK INFO ==========")
 }
 func GetRawMempool() {
-	fmt.Println("========== GET RAW MEMPOOL ==========")
-	b, _ := rpc.GetRawMempool()
-	fmt.Println(string(b))
-	fmt.Println("========== END GET RAW MEMPOOL ==========")
+	fmt.Println("==================================")
+	txList, err := debugtool.GetRawMempool()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	for _, txHash := range txList {
+		fmt.Println(txHash)
+	}
+	fmt.Printf("%v Number of txs: %v\n", time.Now().String(), len(txList))
+	fmt.Println("==================================")
 }
 func GetTxByHash(txHash string) {
 	fmt.Println("========== GET TX BY HASH ==========")
@@ -185,9 +193,27 @@ func ParsePaymentAddress(arg string, privateKeys []string) (string, error) {
 
 	return paymentAddr, nil
 }
-func GetShardIDFromPrivateKey(privateKey string) byte {
-	pubkey := debugtool.PrivateKeyToPublicKey(privateKey)
-	return common.GetShardIDFromLastByte(pubkey[len(pubkey)-1])
+func ParsePublicKey(arg string, privateKeys []string) (string, error) {
+	var publicKey string
+	if len(arg) < 3 {
+		index, err := strconv.ParseInt(arg, 10, 32)
+		if err != nil {
+			return "", err
+		}
+		if index >= int64(len(privateKeys)) {
+			return "", fmt.Errorf("Cannot find the private key")
+		}
+		privateKey := privateKeys[index]
+		publicKeyBytes := debugtool.PrivateKeyToPublicKey(privateKey)
+		if len(publicKeyBytes) == 0 {
+			return "", fmt.Errorf("cannot parse public key %v", arg)
+		}
+		publicKey = base58.Base58Check{}.Encode(publicKeyBytes, 0)
+	} else {
+		publicKey = arg
+	}
+
+	return publicKey, nil
 }
 func GenKeySet(b []byte) (string, string, string) {
 	if b == nil {

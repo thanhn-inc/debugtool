@@ -3,6 +3,7 @@ package debugtool
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/thanhn-inc/debugtool/common"
 	"github.com/thanhn-inc/debugtool/rpchandler"
 	"github.com/thanhn-inc/debugtool/rpchandler/jsonresult"
 	"github.com/thanhn-inc/debugtool/rpchandler/rpc"
@@ -92,6 +93,32 @@ func GetListToken() (map[string]CustomToken, error) {
 	return listTokens, nil
 }
 
+func GetRawMempool() ([]string, error) {
+	responseInBytes, err := rpc.GetRawMempool()
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := rpchandler.ParseResponse(responseInBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	var txHashes map[string][]string
+	err = json.Unmarshal(response.Result, &txHashes)
+	if err != nil {
+		return nil, err
+	}
+
+	txList, ok := txHashes["TxHashes"]
+	if !ok {
+		return nil, fmt.Errorf("TxHashes not found in %v", txHashes)
+	}
+
+	return txList, nil
+
+}
+
 //Keys
 func PrivateKeyToPaymentAddress(privkey string, keyType int) string {
 	keyWallet, _ := wallet.Base58CheckDeserialize(privkey)
@@ -111,8 +138,20 @@ func PrivateKeyToPaymentAddress(privkey string, keyType int) string {
 func PrivateKeyToPublicKey(privkey string) []byte {
 	keyWallet, err := wallet.Base58CheckDeserialize(privkey)
 	if err != nil {
-		panic(err)
+		return nil
 	}
 	keyWallet.KeySet.InitFromPrivateKey(&keyWallet.KeySet.PrivateKey)
 	return keyWallet.KeySet.PaymentAddress.Pk
+}
+func PrivateKeyToPrivateOTAKey(privkey string) string {
+	keyWallet, err := wallet.Base58CheckDeserialize(privkey)
+	if err != nil {
+		panic(err)
+	}
+	keyWallet.KeySet.InitFromPrivateKey(&keyWallet.KeySet.PrivateKey)
+	return keyWallet.Base58CheckSerialize(wallet.OTAKeyType)
+}
+func GetShardIDFromPrivateKey(privateKey string) byte {
+	pubkey := PrivateKeyToPublicKey(privateKey)
+	return common.GetShardIDFromLastByte(pubkey[len(pubkey)-1])
 }
