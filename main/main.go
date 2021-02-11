@@ -434,6 +434,9 @@ func main() {
 		case "listtoken":
 			ListTokens()
 
+		case "bridgetoken":
+			ListBridgeTokens()
+
 		//KEY
 		case "payment":
 			var err error

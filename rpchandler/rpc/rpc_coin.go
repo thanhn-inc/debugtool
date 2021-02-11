@@ -117,6 +117,22 @@ func ListPrivacyCustomTokenByRPC() ([]byte, error) {
 	return rpchandler.Server.SendPostRequestWithQuery(query)
 }
 
+//ListPrivacyCustomTokenByRPC lists all tokens currently present on the blockchain
+func ListBridgeTokenByRPC() ([]byte, error) {
+	method := getAllBridgeTokens
+
+	params := make([]interface{}, 0)
+
+	request := rpchandler.CreateJsonRequest("1.0", method, params, 1)
+
+	query, err := json.Marshal(request)
+	if err != nil {
+		return nil, err
+	}
+
+	return rpchandler.Server.SendPostRequestWithQuery(string(query))
+}
+
 //HasSerialNumberByRPC checks if the provided serial numbers have been spent or not.
 //
 //Returned result in raw json bytes.

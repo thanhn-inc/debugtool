@@ -251,6 +251,17 @@ func ListTokens() {
 	fmt.Println("========== END LIST ALL TOKEN ==========")
 	return
 }
+func ListBridgeTokens() {
+	fmt.Println("========== LIST ALL TOKEN ==========")
+	b, err := rpc.ListBridgeTokenByRPC()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(string(b))
+	fmt.Println("========== END LIST ALL TOKEN ==========")
+	return
+}
 func ParseTokenID(arg string) (string, error) {
 	if len(arg) < 10 {
 		tokenID, ok := common.SupportedTokenID[arg]
