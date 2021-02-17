@@ -64,12 +64,12 @@ func GetBestBlock() (map[int]uint64, error) {
 }
 
 func GetListToken() (map[string]CustomToken, error) {
-	response, err := rpc.ListPrivacyCustomTokenByRPC()
+	responseInBytes, err := rpc.ListPrivacyCustomTokenByRPC()
 	if err != nil {
 		return nil, err
 	}
-	res := new(rpc.ListCustomToken)
-	err = json.Unmarshal(response, res)
+	var res rpc.ListCustomToken
+	err = json.Unmarshal(responseInBytes, &res)
 	if err != nil {
 		return nil, err
 	}

@@ -10,7 +10,7 @@ type ListCustomToken struct {
 			Name               string        `json:"Name"`
 			Symbol             string        `json:"Symbol"`
 			Image              string        `json:"Image"`
-			Amount             int64         `json:"Amount"`
+			Amount             float64       `json:"Amount"`
 			IsPrivacy          bool          `json:"IsPrivacy"`
 			IsBridgeToken      bool          `json:"IsBridgeToken"`
 			ListTxs            []interface{} `json:"ListTxs"`
