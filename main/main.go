@@ -547,7 +547,9 @@ func main() {
 				continue
 			}
 
-			b, err := rpc.SubmitKey(privateKey)
+			otaKey := debugtool.PrivateKeyToPrivateOTAKey(privateKey)
+
+			b, err := rpc.SubmitKey(otaKey)
 			if err != nil {
 				fmt.Println(err)
 				continue

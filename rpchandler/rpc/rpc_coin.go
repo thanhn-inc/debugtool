@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -180,17 +181,28 @@ func GetBalanceByPrivatekey(privKeyStr string) ([]byte, error) {
 	return rpchandler.Server.SendPostRequestWithQuery(query)
 }
 
-func SubmitKey(privKeyStr string) ([]byte, error) {
+func SubmitKey(otaStr string) ([]byte, error) {
 	if len(rpchandler.Server.GetURL()) == 0 {
 		return []byte{}, errors.New("Server has not set mainnet or testnet")
 	}
+
+	keyWallet, err := wallet.Base58CheckDeserialize(otaStr)
+	if err != nil {
+		return nil, err
+	}
+
+	rawOTA := make([]byte, 0)
+	rawOTA = append(rawOTA, keyWallet.KeySet.OTAKey.GetOTASecretKey().ToBytesS()...)
+	rawOTA = append(rawOTA, keyWallet.KeySet.OTAKey.GetPublicSpend().ToBytesS()...)
+
+	otaToBeSent := hex.EncodeToString(rawOTA)
 
 	query := fmt.Sprintf(`{
 	   "jsonrpc":"1.0",
 	   "method":"submitkey",
 	   "params":["%s"],
 	   "id":1
-	}`, privKeyStr)
+	}`, otaToBeSent)
 
 	return rpchandler.Server.SendPostRequestWithQuery(query)
 }
