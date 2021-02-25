@@ -148,9 +148,19 @@ func PrivateKeyToPrivateOTAKey(privkey string) string {
 	if err != nil {
 		panic(err)
 	}
-	keyWallet.KeySet.InitFromPrivateKey(&keyWallet.KeySet.PrivateKey)
+	err = keyWallet.KeySet.InitFromPrivateKey(&keyWallet.KeySet.PrivateKey)
 	return keyWallet.Base58CheckSerialize(wallet.OTAKeyType)
 }
+
+func PrivateKeyToReadonlyKey(privkey string) string {
+	keyWallet, err := wallet.Base58CheckDeserialize(privkey)
+	if err != nil {
+		panic(err)
+	}
+	err = keyWallet.KeySet.InitFromPrivateKey(&keyWallet.KeySet.PrivateKey)
+	return keyWallet.Base58CheckSerialize(wallet.ReadonlyKeyType)
+}
+
 func GetShardIDFromPrivateKey(privateKey string) byte {
 	pubkey := PrivateKeyToPublicKey(privateKey)
 	return common.GetShardIDFromLastByte(pubkey[len(pubkey)-1])
