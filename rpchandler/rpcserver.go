@@ -56,7 +56,7 @@ func InitTestNet() {
 	if Server == nil {
 		Server = new(RPCServer)
 	}
-	Server.url = "http://51.83.36.184:20002"
+	Server.url = "https://testnet.incognito.org/fullnode"
 	EthServer.url = "https://kovan.infura.io/v3/93fe721349134964aa71071a713c5cef"
 	common.EthContractAddressStr = common.TestnetETHContractAddressStr
 }
@@ -84,7 +84,7 @@ func InitDevNet(port string) {
 	if len(port) > 0 {
 		Server.url = "http://139.162.55.124:" + port
 	} else {
-		Server.url = "http://139.162.55.124:3334"
+		Server.url = "http://139.162.55.124:8334"
 	}
 	EthServer.url = "https://kovan.infura.io/v3/93fe721349134964aa71071a713c5cef"
 	common.EthContractAddressStr = common.TestnetETHContractAddressStr

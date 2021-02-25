@@ -13,6 +13,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 //Comment the init function in blockchain/constants.go to run the debug tool.
@@ -101,6 +102,16 @@ func main() {
 				port = args[1]
 			}
 			err = InitLocal(port)
+			if err != nil {
+				panic(err)
+			}
+
+		case "initurl":
+			port := ""
+			if len(args) > 2 {
+				port = args[2]
+			}
+			err = InitToURL(args[1], port)
 			if err != nil {
 				panic(err)
 			}
@@ -507,6 +518,26 @@ func main() {
 
 			privateOTAKey := debugtool.PrivateKeyToPrivateOTAKey(privateKey)
 			fmt.Println("PrivateOTA Key", privateOTAKey)
+
+		case "readonly":
+			var privateKey string
+			if len(args[1]) < 3 {
+				index, err := strconv.ParseInt(args[1], 10, 32)
+				if err != nil {
+					fmt.Println(err)
+					panic(err)
+				}
+				if index >= int64(len(privateKeys)) {
+					fmt.Println("Cannot find the private key")
+					continue
+				}
+				privateKey = privateKeys[index]
+			} else {
+				privateKey = args[1]
+			}
+
+			privateOTAKey := debugtool.PrivateKeyToReadonlyKey(privateKey)
+			fmt.Println("Readonly Key", privateOTAKey)
 
 		case "genkeyset":
 			privateKey, payment, _ := GenKeySet([]byte(args[1]))

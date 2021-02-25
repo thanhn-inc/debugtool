@@ -88,6 +88,24 @@ func InitLocal(port string) error {
 
 	return nil
 }
+func InitToURL(url string, port string) error {
+	if len(port) != 0 {
+		url = fmt.Sprintf("%v:%v", url, port)
+	}
+	rpchandler.Server.InitToURL(url)
+
+	activeShards, err := debugtool.GetActiveShard()
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Init to: %v, eth server: %v, number of active shards: %v\n", rpchandler.Server.GetURL(), rpchandler.EthServer.GetURL(), activeShards)
+	common.MaxShardNumber = activeShards
+
+	common.SupportedTokenID = mainNetTokenIDs
+
+	return nil
+}
 func SwitchPort(newPort string) error {
 	rpchandler.Server = new(rpchandler.RPCServer).InitToURL(fmt.Sprintf("http://127.0.0.1:%v", newPort))
 
