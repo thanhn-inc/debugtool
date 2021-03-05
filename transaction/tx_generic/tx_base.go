@@ -192,13 +192,16 @@ func (tx *TxBase) UnmarshalJSON(data []byte) error {
 	if temp.Metadata == nil {
 		tx.SetMetadata(nil)
 	} else {
-		tx.SetMetadata(nil)
-		//meta, parseErr := metadata.ParseMetadata(temp.Metadata)
-		//if parseErr != nil {
-		//	utils.Logger.Log.Error(parseErr)
-		//	return parseErr
-		//}
-		//tx.SetMetadata(meta)
+		metaInBytes, err := json.Marshal(temp.Metadata)
+		if err != nil {
+			return err
+		}
+
+		meta, parseErr := metadata.ParseMetadata(metaInBytes)
+		if parseErr != nil {
+			return parseErr
+		}
+		tx.SetMetadata(meta)
 	}
 
 	proofType := tx.Type
