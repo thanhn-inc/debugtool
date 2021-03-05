@@ -1235,6 +1235,10 @@ func main() {
 				fmt.Println("fi")
 			}
 
+		case "changeb58":
+			common.AddressVersion = 1 - common.AddressVersion
+			fmt.Printf("Address version changed to: %v\n", common.AddressVersion)
+
 		//SECURE
 		case "stransfer":
 			if len(args) < 4 {
